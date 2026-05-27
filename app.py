@@ -262,13 +262,14 @@ with st.sidebar:
 # HELPERS
 # ════════════════════════════════════════════════════════
 def build_prompt(sn, sc, sp, sv, tn, tc, tr, ti, ctx, tone, lang, ab=False):
-    ab_note = "Genera DUE versioni della Cold Email (VARIANTE A e VARIANTE B) con hook diversi. Inserisci entrambe nella sezione 1." if ab else ""
+    ab_note = "Genera DUE versioni della Cold Email (VARIANTE A e VARIANTE B) con hook diversi. Separale SOLO con il token ===AB=== (nient'altro tra le due varianti). Inserisci entrambe nella sezione 1." if ab else ""
     return f"""Sei un SDR di élite. Crea un kit di prospecting B2B completo e iper-personalizzato.
 
 VENDITORE: {sn} | {sc} | {sp} | Value prop: {sv or "N/D"} | Tono: {tone}
 TARGET: {tn} | {tr} @ {tc} | Settore: {ti or "N/D"} | Contesto: {ctx or "N/D"}
 
 Genera TUTTO in {lang}. {ab_note}
+OUTPUT: testo PULITO e pronto all'uso. VIETATO usare markdown (no #, no **, no ___, no ---). Niente titoli di sezione, niente numeri di sezione, niente intestazioni decorative.
 6 elementi separati SOLO dal token ===SEP===:
 
 1. COLD EMAIL
@@ -338,6 +339,19 @@ def research_prospect(name, company, role):
 
 import html as _html
 
+def _clean(text):
+    out = []
+    for line in text.split("\n"):
+        s = line.strip()
+        if s.startswith("#"):
+            continue
+        if s in ("---", "___", "***", "===SEP===", "===AB==="):
+            continue
+        if s.startswith("===") and s.endswith("==="):
+            continue
+        out.append(line)
+    return "\n".join(out).strip()
+
 def _copyable_block(text, uid):
     display = _html.escape(text).replace("\n", "<br>")
     js_text = text.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
@@ -356,7 +370,8 @@ def _copyable_block(text, uid):
   </button>
 </div>""", unsafe_allow_html=True)
 
-def render_email(text, label, uid="0"):
+def _parse_email(text):
+    text = _clean(text)
     lines = text.split("\n")
     subj, body_lines = "", []
     for l in lines:
@@ -364,13 +379,28 @@ def render_email(text, label, uid="0"):
             subj = l.split(":", 1)[-1].strip() if ":" in l else l
         else:
             body_lines.append(l)
-    body = "\n".join(body_lines).strip()
-    st.markdown(f'<p class="c-label">{label}</p>', unsafe_allow_html=True)
+    return subj, "\n".join(body_lines).strip()
+
+def _render_single_email(text, uid):
+    subj, body = _parse_email(text)
     if subj:
         st.markdown(f'<div class="email-subject-box"><span class="email-subject-label">Oggetto</span><span class="email-subject-text">{_html.escape(subj)}</span></div>', unsafe_allow_html=True)
     _copyable_block(body, uid)
 
+def render_email(text, label, uid="0"):
+    st.markdown(f'<p class="c-label">{label}</p>', unsafe_allow_html=True)
+    if "===AB===" in text:
+        parts = text.split("===AB===")
+        ta, tb = st.tabs(["Variante A", "Variante B"])
+        with ta:
+            _render_single_email(parts[0], uid + "a")
+        with tb:
+            _render_single_email(parts[1] if len(parts) > 1 else "", uid + "b")
+    else:
+        _render_single_email(text, uid)
+
 def render_linkedin(text, label, uid="0", max_chars=300):
+    text = _clean(text)
     n = len(text)
     pct = min(100, int(n / max_chars * 100))
     color = "#dc2626" if n > max_chars else "#d97706" if n > int(max_chars * 0.87) else "#16a34a"
@@ -464,7 +494,7 @@ def render_kit_output(kit, meta, quality=None):
             render_linkedin(kit.get("li_connect",""), "Messaggio di connessione", uid="li1", max_chars=300)
         with b:
             st.markdown('<p class="c-label">Follow-up dopo accettazione</p>', unsafe_allow_html=True)
-            _copyable_block(kit.get("li_followup",""), uid="li2")
+            _copyable_block(_clean(kit.get("li_followup","")), uid="li2")
 
     with tab3:
         a, b = st.columns(2)
@@ -475,7 +505,7 @@ def render_kit_output(kit, meta, quality=None):
 
     with tab4:
         st.markdown('<p class="c-label">Script cold call — 15 secondi</p>', unsafe_allow_html=True)
-        _copyable_block(kit.get("cold_call",""), uid="cc")
+        _copyable_block(_clean(kit.get("cold_call","")), uid="cc")
         st.info("Leggi ad alta voce 3 volte prima di chiamare. Adattalo al tuo ritmo.")
 
 
