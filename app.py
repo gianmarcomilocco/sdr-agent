@@ -619,25 +619,21 @@ if nav == "🎯 Generatore":
                 else:
                     t0 = time.time()
                     research_ctx = ""
-                    with st.status(f"Generando kit per {tn} @ {tc}...", expanded=True) as status:
+                    with st.spinner("Generando il kit — circa 45 secondi..."):
                         if do_research:
-                            st.write("🔍 Ricercando informazioni su " + tc + "...")
                             research_ctx = research_prospect(tn, tc, tr)
                             if research_ctx:
                                 ctx = (ctx + "\n\nRicerca web:\n" + research_ctx).strip()
-                        st.write("✍️ Costruendo la sequenza outreach...")
                         prompt = build_prompt(sn, sc, sp, sv, tn, tc, tr, ti, ctx, tone, lang, ab_mode)
                         resp = client.messages.create(
                             model="claude-sonnet-4-6", max_tokens=3000,
                             messages=[{"role": "user", "content": prompt}]
                         )
                         testo = resp.content[0].text
-                        st.write("📊 Valutando qualità del kit...")
                         sezioni = [s.strip() for s in testo.split("===SEP===")]
                         chiavi  = ["cold_email","li_connect","li_followup","fu1","fu2","cold_call"]
                         kit = {k: sezioni[i] if i < len(sezioni) else "" for i, k in enumerate(chiavi)}
                         quality = evaluate_quality(kit, tn, tc, tr, ti, tone)
-                        status.update(label="✅ Kit completato!", state="complete")
 
                     elapsed = round(time.time() - t0, 1)
                     meta = {
