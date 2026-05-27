@@ -66,7 +66,7 @@ def delete_profile(pid):
 
 def save_kit(username, meta, kit, elapsed=0, q_score=None, q_strong=None, q_improve=None):
     with conn() as c:
-        c.execute("""
+        cur = c.execute("""
         INSERT INTO kits
           (username,prospect_name,prospect_co,prospect_role,prospect_sector,
            seller_name,seller_co,kit_json,tone,language,elapsed,q_score,q_strong,q_improve)
@@ -79,7 +79,7 @@ def save_kit(username, meta, kit, elapsed=0, q_score=None, q_strong=None, q_impr
             meta.get("tone",""), meta.get("lang",""),
             elapsed, q_score, q_strong, q_improve
         ))
-        return c.lastrowid
+        return cur.lastrowid
 
 def get_history(username, limit=60):
     with conn() as c:
