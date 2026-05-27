@@ -338,6 +338,7 @@ def research_prospect(name, company, role):
 
 
 import html as _html
+import streamlit.components.v1 as _components
 
 def _clean(text):
     out = []
@@ -354,21 +355,36 @@ def _clean(text):
 
 def _copyable_block(text, uid):
     display = _html.escape(text).replace("\n", "<br>")
-    js_text = text.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
-    st.markdown(f"""
-<div style="position:relative;background:#f8fafc;border:1px solid #e2e8f0;
-            border-radius:8px;padding:1.1rem 1.3rem 2.8rem;margin-bottom:.3rem">
-  <div style="font-family:'IBM Plex Sans',sans-serif;font-size:.875rem;
-              line-height:1.8;color:#1e293b;white-space:pre-wrap;
-              word-break:break-word">{display}</div>
-  <button onclick="navigator.clipboard.writeText(`{js_text}`);this.innerHTML='✓ Copiato';setTimeout(()=>this.innerHTML='📋 Copia',1800)"
-          style="position:absolute;bottom:8px;right:10px;background:#fff;
-                 border:1px solid #dce2ec;border-radius:6px;padding:3px 10px;
-                 font-size:.72rem;font-weight:600;color:#334155;cursor:pointer;
-                 font-family:'IBM Plex Sans',sans-serif">
-    📋 Copia
-  </button>
-</div>""", unsafe_allow_html=True)
+    js_text  = _html.escape(text, quote=True)
+    n_lines  = text.count("\n") + 1
+    height   = max(110, n_lines * 26 + 72)
+    _components.html(f"""
+<!DOCTYPE html><html><head>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background:transparent; }}
+  .wrap {{ position:relative; background:#f8fafc; border:1px solid #e2e8f0;
+           border-radius:8px; padding:1rem 1.2rem 2.6rem;
+           font-family:'IBM Plex Sans',sans-serif; font-size:13.5px;
+           line-height:1.8; color:#1e293b; white-space:pre-wrap;
+           word-break:break-word; }}
+  .copy-btn {{ position:absolute; bottom:8px; right:10px; background:#fff;
+               border:1px solid #dce2ec; border-radius:6px; padding:3px 10px;
+               font-size:11px; font-weight:600; color:#334155; cursor:pointer;
+               font-family:'IBM Plex Sans',sans-serif; }}
+  .copy-btn:hover {{ border-color:#1a56db; color:#1a56db; }}
+</style></head><body>
+<div class="wrap" id="t">{display}
+  <button class="copy-btn" onclick="
+    var el=document.createElement('textarea');
+    el.value=document.getElementById('t').innerText.replace(/\\n📋 Copia$/, '').trim();
+    document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    this.textContent='✓ Copiato';
+    setTimeout(()=>this.textContent='📋 Copia',1800)">📋 Copia</button>
+</div>
+</body></html>""", height=height, scrolling=False)
 
 def _parse_email(text):
     text = _clean(text)
