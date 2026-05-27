@@ -439,7 +439,7 @@ def render_kit_output(kit, meta, quality=None):
     st.markdown(f"""
 <div class="stats-bar">
   <div class="stat-item"><span class="sv">6</span><span class="sl">asset pronti</span></div>
-  <div class="stat-item"><span class="sv">{elapsed}s</span><span class="sl">generazione</span></div>
+  <div class="stat-item"><span class="sv">{elapsed}s</span><span class="sl">tempo reale</span></div>
   <div class="stat-item"><span class="sv">~2h</span><span class="sl">lavoro manuale evitato</span></div>
   <div class="stat-item"><span class="sv">100%</span><span class="sl">personalizzato</span></div>
 </div>""", unsafe_allow_html=True)
@@ -519,7 +519,7 @@ if nav == "🎯 Generatore":
   <p class="sdr-sub">Kit di prospecting B2B personalizzato — 6 asset pronti in 20 secondi</p>
   <div class="hdr-metrics">
     <div class="hdr-m"><span class="v">6</span><span class="l">Asset per prospect</span></div>
-    <div class="hdr-m"><span class="v">~20s</span><span class="l">Generazione</span></div>
+    <div class="hdr-m"><span class="v">~45s</span><span class="l">Generazione</span></div>
     <div class="hdr-m"><span class="v">~2h</span><span class="l">Lavoro manuale evitato</span></div>
     <div class="hdr-m"><span class="v">∞</span><span class="l">Lingue supportate</span></div>
   </div>
