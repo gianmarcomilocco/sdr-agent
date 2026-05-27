@@ -336,38 +336,55 @@ def research_prospect(name, company, role):
         return ""
 
 
-def extract_subject(text):
-    for line in text.split("\n"):
-        if line.lower().startswith("oggetto") or line.lower().startswith("subject"):
-            return line.split(":", 1)[-1].strip() if ":" in line else ""
-    return ""
+import html as _html
 
-def strip_subject(text):
+def _copyable_block(text, uid):
+    display = _html.escape(text).replace("\n", "<br>")
+    js_text = text.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
+    st.markdown(f"""
+<div style="position:relative;background:#f8fafc;border:1px solid #e2e8f0;
+            border-radius:8px;padding:1.1rem 1.3rem 2.8rem;margin-bottom:.3rem">
+  <div style="font-family:'IBM Plex Sans',sans-serif;font-size:.875rem;
+              line-height:1.8;color:#1e293b;white-space:pre-wrap;
+              word-break:break-word">{display}</div>
+  <button onclick="navigator.clipboard.writeText(`{js_text}`);this.innerHTML='✓ Copiato';setTimeout(()=>this.innerHTML='📋 Copia',1800)"
+          style="position:absolute;bottom:8px;right:10px;background:#fff;
+                 border:1px solid #dce2ec;border-radius:6px;padding:3px 10px;
+                 font-size:.72rem;font-weight:600;color:#334155;cursor:pointer;
+                 font-family:'IBM Plex Sans',sans-serif">
+    📋 Copia
+  </button>
+</div>""", unsafe_allow_html=True)
+
+def render_email(text, label, uid="0"):
     lines = text.split("\n")
-    out = [l for l in lines if not (l.lower().startswith("oggetto") or l.lower().startswith("subject"))]
-    return "\n".join(out).strip()
-
-def render_email(text, label="Email"):
-    subj = extract_subject(text)
-    body = strip_subject(text)
+    subj, body_lines = "", []
+    for l in lines:
+        if not subj and (l.lower().startswith("oggetto") or l.lower().startswith("subject")):
+            subj = l.split(":", 1)[-1].strip() if ":" in l else l
+        else:
+            body_lines.append(l)
+    body = "\n".join(body_lines).strip()
     st.markdown(f'<p class="c-label">{label}</p>', unsafe_allow_html=True)
     if subj:
-        st.markdown(f'<div class="email-subject-box"><span class="email-subject-label">Oggetto</span><span class="email-subject-text">{subj}</span></div>', unsafe_allow_html=True)
-    st.code(body, language=None)
+        st.markdown(f'<div class="email-subject-box"><span class="email-subject-label">Oggetto</span><span class="email-subject-text">{_html.escape(subj)}</span></div>', unsafe_allow_html=True)
+    _copyable_block(body, uid)
 
-def render_linkedin(text, label, max_chars=300):
+def render_linkedin(text, label, uid="0", max_chars=300):
     n = len(text)
     pct = min(100, int(n / max_chars * 100))
     color = "#dc2626" if n > max_chars else "#d97706" if n > int(max_chars * 0.87) else "#16a34a"
     st.markdown(f'<p class="c-label">{label}</p>', unsafe_allow_html=True)
-    st.code(text, language=None)
+    _copyable_block(text, uid)
     st.markdown(f"""
-<div class="char-bar-wrap">
+<div style="margin-top:.35rem">
   <div style="display:flex;justify-content:space-between;align-items:center">
     <span style="font-size:.68rem;color:#8896aa">Caratteri</span>
     <span style="font-size:.72rem;font-weight:700;color:{color}">{n} / {max_chars}</span>
   </div>
-  <div class="char-bar-bg"><div class="char-bar-fill" style="width:{pct}%;background:{color}"></div></div>
+  <div style="background:#e2e8f0;border-radius:4px;height:3px;margin-top:.3rem;overflow:hidden">
+    <div style="width:{pct}%;height:3px;border-radius:4px;background:{color}"></div>
+  </div>
 </div>""", unsafe_allow_html=True)
 
 def format_kit_txt(kit, meta):
@@ -439,26 +456,26 @@ def render_kit_output(kit, meta, quality=None):
     tab1, tab2, tab3, tab4 = st.tabs(["📧 Cold Email", "💼 LinkedIn", "🔄 Follow-up", "📞 Cold Call"])
 
     with tab1:
-        render_email(kit.get("cold_email",""), "Cold Email")
+        render_email(kit.get("cold_email",""), "Cold Email", uid="ce")
 
     with tab2:
         a, b = st.columns(2)
         with a:
-            render_linkedin(kit.get("li_connect",""), "Messaggio di connessione", max_chars=300)
+            render_linkedin(kit.get("li_connect",""), "Messaggio di connessione", uid="li1", max_chars=300)
         with b:
             st.markdown('<p class="c-label">Follow-up dopo accettazione</p>', unsafe_allow_html=True)
-            st.code(kit.get("li_followup",""), language=None)
+            _copyable_block(kit.get("li_followup",""), uid="li2")
 
     with tab3:
         a, b = st.columns(2)
         with a:
-            render_email(kit.get("fu1",""), "Follow-up 1 — Giorno 3")
+            render_email(kit.get("fu1",""), "Follow-up 1 — Giorno 3", uid="fu1")
         with b:
-            render_email(kit.get("fu2",""), "Follow-up 2 — Giorno 7")
+            render_email(kit.get("fu2",""), "Follow-up 2 — Giorno 7", uid="fu2")
 
     with tab4:
         st.markdown('<p class="c-label">Script cold call — 15 secondi</p>', unsafe_allow_html=True)
-        st.code(kit.get("cold_call",""), language=None)
+        _copyable_block(kit.get("cold_call",""), uid="cc")
         st.info("Leggi ad alta voce 3 volte prima di chiamare. Adattalo al tuo ritmo.")
 
 
