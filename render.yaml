@@ -1,0 +1,33 @@
+services:
+  # ── DEMO instance (public, no login, 2 free generations) ──────────────
+  - type: web
+    name: sdr-agent-demo
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+    envVars:
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_MAX_USES
+        value: "2"
+      - key: CONTACT_NAME
+        value: "Gianmarco"
+      - key: CONTACT_EMAIL
+        value: "gianmarco.milocco@gmail.com"
+      - key: CONTACT_PHONE
+        value: ""
+      - key: ANTHROPIC_API_KEY
+        sync: false   # set manually in Render dashboard (secret)
+
+  # ── CLIENT instance (private, login required, unlimited) ───────────────
+  # Duplicate this block for each paying client and change the name.
+  # - type: web
+  #   name: sdr-agent-client-acme
+  #   runtime: python
+  #   buildCommand: pip install -r requirements.txt
+  #   startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+  #   envVars:
+  #     - key: DEMO_MODE
+  #       value: "false"
+  #     - key: ANTHROPIC_API_KEY
+  #       sync: false
