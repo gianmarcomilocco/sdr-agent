@@ -164,6 +164,37 @@ hr { border-color: #e4eaf2 !important; margin: 1rem 0 !important; }
 [data-testid="stSuccess"] { border-radius: 8px !important; }
 [data-testid="stAlert"]   { border-radius: 8px !important; }
 [data-testid="stWarning"] { border-radius: 8px !important; }
+
+/* Document viewer — override code block stile */
+[data-testid="stCode"] pre {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 1.2rem 1.4rem !important;
+    margin: 0 !important;
+}
+[data-testid="stCode"] code {
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif !important;
+    font-size: .875rem !important;
+    line-height: 1.8 !important;
+    color: #1e293b !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    background: transparent !important;
+}
+.email-subject-box {
+    background: #eff6ff; border: 1px solid #bfdbfe;
+    border-radius: 7px; padding: .55rem 1.1rem;
+    margin-bottom: .65rem; display: flex; align-items: baseline; gap: .5rem;
+}
+.email-subject-label {
+    font-size: .65rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: #3b82f6; white-space: nowrap;
+}
+.email-subject-text { font-size: .88rem; font-weight: 600; color: #0f172a; }
+.char-bar-wrap { margin-top: .45rem; }
+.char-bar-bg { background: #e2e8f0; border-radius: 4px; height: 3px; margin-top: .3rem; overflow: hidden; }
+.char-bar-fill { height: 3px; border-radius: 4px; transition: width .2s; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -305,6 +336,40 @@ def research_prospect(name, company, role):
         return ""
 
 
+def extract_subject(text):
+    for line in text.split("\n"):
+        if line.lower().startswith("oggetto") or line.lower().startswith("subject"):
+            return line.split(":", 1)[-1].strip() if ":" in line else ""
+    return ""
+
+def strip_subject(text):
+    lines = text.split("\n")
+    out = [l for l in lines if not (l.lower().startswith("oggetto") or l.lower().startswith("subject"))]
+    return "\n".join(out).strip()
+
+def render_email(text, label="Email"):
+    subj = extract_subject(text)
+    body = strip_subject(text)
+    st.markdown(f'<p class="c-label">{label}</p>', unsafe_allow_html=True)
+    if subj:
+        st.markdown(f'<div class="email-subject-box"><span class="email-subject-label">Oggetto</span><span class="email-subject-text">{subj}</span></div>', unsafe_allow_html=True)
+    st.code(body, language=None)
+
+def render_linkedin(text, label, max_chars=300):
+    n = len(text)
+    pct = min(100, int(n / max_chars * 100))
+    color = "#dc2626" if n > max_chars else "#d97706" if n > int(max_chars * 0.87) else "#16a34a"
+    st.markdown(f'<p class="c-label">{label}</p>', unsafe_allow_html=True)
+    st.code(text, language=None)
+    st.markdown(f"""
+<div class="char-bar-wrap">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:.68rem;color:#8896aa">Caratteri</span>
+    <span style="font-size:.72rem;font-weight:700;color:{color}">{n} / {max_chars}</span>
+  </div>
+  <div class="char-bar-bg"><div class="char-bar-fill" style="width:{pct}%;background:{color}"></div></div>
+</div>""", unsafe_allow_html=True)
+
 def format_kit_txt(kit, meta):
     sep = "─" * 50
     ts  = meta.get("ts", datetime.now().strftime("%d/%m/%Y %H:%M"))
@@ -374,17 +439,12 @@ def render_kit_output(kit, meta, quality=None):
     tab1, tab2, tab3, tab4 = st.tabs(["📧 Cold Email", "💼 LinkedIn", "🔄 Follow-up", "📞 Cold Call"])
 
     with tab1:
-        st.markdown('<p class="c-label">Cold Email</p>', unsafe_allow_html=True)
-        st.code(kit.get("cold_email",""), language=None)
+        render_email(kit.get("cold_email",""), "Cold Email")
 
     with tab2:
         a, b = st.columns(2)
         with a:
-            st.markdown('<p class="c-label">Connessione</p>', unsafe_allow_html=True)
-            st.code(kit.get("li_connect",""), language=None)
-            n = len(kit.get("li_connect",""))
-            cls = "char-over" if n > 300 else "char-warn" if n > 260 else "char-cc"
-            st.markdown(f'<p class="{cls}">{n}/300</p>', unsafe_allow_html=True)
+            render_linkedin(kit.get("li_connect",""), "Messaggio di connessione", max_chars=300)
         with b:
             st.markdown('<p class="c-label">Follow-up dopo accettazione</p>', unsafe_allow_html=True)
             st.code(kit.get("li_followup",""), language=None)
@@ -392,11 +452,9 @@ def render_kit_output(kit, meta, quality=None):
     with tab3:
         a, b = st.columns(2)
         with a:
-            st.markdown('<p class="c-label">Follow-up 1 — Giorno 3</p>', unsafe_allow_html=True)
-            st.code(kit.get("fu1",""), language=None)
+            render_email(kit.get("fu1",""), "Follow-up 1 — Giorno 3")
         with b:
-            st.markdown('<p class="c-label">Follow-up 2 — Giorno 7</p>', unsafe_allow_html=True)
-            st.code(kit.get("fu2",""), language=None)
+            render_email(kit.get("fu2",""), "Follow-up 2 — Giorno 7")
 
     with tab4:
         st.markdown('<p class="c-label">Script cold call — 15 secondi</p>', unsafe_allow_html=True)
