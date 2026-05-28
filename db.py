@@ -23,6 +23,12 @@ def init():
             created_at  TEXT DEFAULT (datetime('now'))
         );
 
+        CREATE TABLE IF NOT EXISTS demo_visits (
+            ip    TEXT PRIMARY KEY,
+            uses  INTEGER DEFAULT 0,
+            last_visit TEXT DEFAULT (datetime('now'))
+        );
+
         CREATE TABLE IF NOT EXISTS kits (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             username        TEXT NOT NULL,
@@ -42,6 +48,22 @@ def init():
             generated_at    TEXT DEFAULT (datetime('now'))
         );
         """)
+
+# ── Demo visits ──────────────────────────────────────────
+
+def get_demo_uses(ip):
+    with conn() as c:
+        r = c.execute("SELECT uses FROM demo_visits WHERE ip=?", (ip,)).fetchone()
+        return r["uses"] if r else 0
+
+def increment_demo_uses(ip):
+    with conn() as c:
+        c.execute("""
+            INSERT INTO demo_visits (ip, uses, last_visit) VALUES (?, 1, datetime('now'))
+            ON CONFLICT(ip) DO UPDATE SET uses = uses + 1, last_visit = datetime('now')
+        """, (ip,))
+        r = c.execute("SELECT uses FROM demo_visits WHERE ip=?", (ip,)).fetchone()
+        return r["uses"] if r else 1
 
 # ── Seller profiles ──────────────────────────────────────
 

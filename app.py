@@ -228,8 +228,15 @@ hr { border-color: #e4eaf2 !important; margin: 1rem 0 !important; }
 if DEMO_MODE:
     username     = "demo_visitor"
     user_display = "Demo"
-    if "demo_uses" not in st.session_state:
-        st.session_state.demo_uses = 0
+    # Ricava IP visitatore per tracking persistente
+    try:
+        fwd = st.context.headers.get("X-Forwarded-For", "")
+        _visitor_ip = fwd.split(",")[0].strip() if fwd else st.context.headers.get("X-Real-Ip", "local")
+    except Exception:
+        _visitor_ip = "local"
+    if "demo_ip" not in st.session_state:
+        st.session_state.demo_ip   = _visitor_ip
+        st.session_state.demo_uses = db.get_demo_uses(_visitor_ip)
 else:
     cfg_path = Path(__file__).parent / "auth_config.yaml"
     with open(cfg_path) as f:
@@ -759,7 +766,8 @@ if nav == "🎯 Generatore":
                     q_improve = quality.get("migliorare") if quality else None
                     db.save_kit(username, meta, kit, elapsed, q_score, q_strong, q_improve)
                     if DEMO_MODE:
-                        st.session_state.demo_uses += 1
+                        new_uses = db.increment_demo_uses(st.session_state.get("demo_ip", "local"))
+                        st.session_state.demo_uses = new_uses
                     st.session_state.current_kit      = kit
                     st.session_state.current_meta     = meta
                     st.session_state.current_qual     = quality
