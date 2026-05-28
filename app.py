@@ -15,6 +15,7 @@ import streamlit_authenticator as stauth
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 import db
+import apollo
 db.init()
 
 DEMO_MODE      = os.getenv("DEMO_MODE", "false").lower() == "true"
@@ -263,8 +264,9 @@ with st.sidebar:
     else:
         st.markdown(f"<p style='font-size:.8rem;color:rgba(255,255,255,.45);margin:0'>Connesso come</p><p style='font-size:.92rem;font-weight:600;margin:2px 0 0'>{user_display}</p>", unsafe_allow_html=True)
         st.divider()
-        nav = st.radio("Navigazione", ["🎯 Generatore", "📦 Bulk CSV", "📚 Archivio", "👤 Profili"],
-                       label_visibility="collapsed")
+        nav = st.radio("Navigazione",
+                       ["🎯 Generatore", "🔍 Trova Prospect", "📦 Bulk CSV", "📚 Archivio", "👤 Profili"],
+                       key="nav_page", label_visibility="collapsed")
         st.divider()
         authenticator.logout(location="sidebar")
     st.markdown("<p style='font-size:.68rem;color:rgba(255,255,255,.2);margin-top:2rem'>AI SDR Agent · Enterprise</p>", unsafe_allow_html=True)
@@ -782,6 +784,98 @@ if nav == "🎯 Generatore":
   <div class="feat-card"><span class="ic">🔄</span><div class="tt">Sequenza Follow-up</div><div class="dd">Due email angoli diversi: giorno 3 e giorno 7</div></div>
   <div class="feat-card"><span class="ic">📞</span><div class="tt">Cold Call Script</div><div class="dd">15 secondi precisi, pronti da leggere ad alta voce</div></div>
 </div>""", unsafe_allow_html=True)
+
+# ════════════════════════════════════════════════════════
+# PAGE — TROVA PROSPECT (Apollo)
+# ════════════════════════════════════════════════════════
+elif nav == "🔍 Trova Prospect":
+    st.markdown('<p class="page-title">🔍 Trova Prospect — Apollo Intelligence</p>', unsafe_allow_html=True)
+
+    if not apollo.configured():
+        st.warning("Chiave Apollo non configurata. Aggiungi **APOLLO_API_KEY** nel file `.env` o nelle variabili d'ambiente Render.")
+        st.code("APOLLO_API_KEY=la-tua-master-api-key", language="bash")
+    else:
+        col_form, col_res = st.columns([2, 5], gap="large")
+
+        with col_form:
+            st.markdown('<p class="sec-label">Filtri ricerca</p>', unsafe_allow_html=True)
+            ap_titles    = st.text_input("Ruolo / Titolo", placeholder="CEO, Direttore Commerciale, CFO",
+                                         help="Separati da virgola. Apollo cerca anche titoli simili.")
+            ap_keywords  = st.text_input("Keywords / Settore", placeholder="SaaS, manifatturiero, retail")
+            ap_loc       = st.text_input("Location persone", value="Italy", placeholder="Italy, Milan, Rome")
+            ap_emp       = st.multiselect("Dimensione azienda", list(apollo.EMP_RANGES.keys()),
+                                          default=["11–50", "51–200"])
+            ap_seniority = st.multiselect("Seniority", list(apollo.SENIORITY_MAP.keys()),
+                                          default=["C-Suite / Founder", "VP / Head", "Director"])
+            ap_per_page  = st.selectbox("Risultati", [10, 25, 50], index=1)
+            ap_search    = st.button("🔍 Cerca", type="primary", use_container_width=True)
+
+        with col_res:
+            if ap_search:
+                titles_list = [t.strip() for t in ap_titles.split(",") if t.strip()] or None
+                locs_list   = [l.strip() for l in ap_loc.split(",") if l.strip()] or None
+                emp_flat    = []
+                for lbl in ap_emp:
+                    emp_flat.extend(apollo.EMP_RANGES.get(lbl, []))
+                sen_flat = []
+                for lbl in ap_seniority:
+                    sen_flat.extend(apollo.SENIORITY_MAP.get(lbl, []))
+
+                with st.spinner("Ricerca su Apollo..."):
+                    try:
+                        data = apollo.search_people(
+                            titles=titles_list,
+                            keywords=ap_keywords or None,
+                            person_locations=locs_list,
+                            emp_ranges=emp_flat or None,
+                            seniorities=sen_flat or None,
+                            per_page=ap_per_page,
+                        )
+                        st.session_state.apollo_results = data.get("people", [])
+                        st.session_state.apollo_total   = data.get("total_entries", 0)
+                    except Exception as e:
+                        st.error(f"Errore Apollo: {e}")
+                        st.session_state.apollo_results = []
+                        st.session_state.apollo_total   = 0
+
+            people = st.session_state.get("apollo_results", [])
+            total  = st.session_state.get("apollo_total", 0)
+
+            if not people and not ap_search:
+                st.markdown("""
+<p style="color:#6b7280;font-size:.87rem;margin-top:1rem">
+Imposta i filtri e clicca <strong>Cerca</strong>.<br>
+Apollo restituisce i cognomi parzialmente oscurati per privacy — completa il nome nel Generatore se necessario.
+</p>""", unsafe_allow_html=True)
+            elif people:
+                st.markdown(f'<p class="sec-label">{total:,} prospect trovati — mostro {len(people)}</p>',
+                            unsafe_allow_html=True)
+
+                for i, p in enumerate(people):
+                    fname  = p.get("first_name", "")
+                    lname  = p.get("last_name_obfuscated", "")
+                    name   = f"{fname} {lname}".strip()
+                    title  = p.get("title") or "—"
+                    org    = (p.get("organization") or {}).get("name", "—")
+                    has_em = p.get("has_email", False)
+
+                    c1, c2 = st.columns([5, 1])
+                    with c1:
+                        em_tag = " · ✉️ email disponibile" if has_em else ""
+                        st.markdown(f"**{name}**{em_tag}")
+                        st.caption(f"{title} · {org}")
+                    with c2:
+                        if st.button("Kit →", key=f"apl_{i}_{p.get('id',i)}", use_container_width=True):
+                            st.session_state.t_nome    = name
+                            st.session_state.t_azienda = org
+                            st.session_state.t_ruolo   = title
+                            st.session_state.t_settore = ""
+                            st.session_state.t_contesto = ""
+                            st.session_state["nav_page"] = "🎯 Generatore"
+                            st.rerun()
+                    st.divider()
+            elif ap_search:
+                st.info("Nessun risultato. Prova a modificare i filtri o amplia i criteri.")
 
 # ════════════════════════════════════════════════════════
 # PAGE — BULK CSV
