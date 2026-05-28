@@ -311,7 +311,7 @@ Oggetto: [specifico, max 7 parole, senza punto interrogativo, cita {tc} o {ti} o
 
 ===SEP===
 2. LINKEDIN — CONNESSIONE
-[Max 280 caratteri. Umano, specifico su {tc} o {ti}. NON "Ho visto il tuo profilo". Diretto, niente piaggeria.]
+[TASSATIVO: massimo 280 caratteri spazi inclusi — LinkedIn rifiuta messaggi più lunghi. Conta ogni carattere prima di scrivere. Umano, specifico su {tc} o {ti}. NON "Ho visto il tuo profilo". Diretto, niente piaggeria.]
 
 ===SEP===
 3. LINKEDIN — FOLLOW-UP
@@ -628,14 +628,27 @@ def render_kit_output(kit, meta, quality=None, triggers=None, subjects=None):
             st.info("Genera un kit per vedere le varianti oggetto.")
 
     with tab3:
-        li_search = (
-            "https://www.linkedin.com/search/results/people/?keywords="
-            + urllib.parse.quote(f"{meta.get('prospect','')} {meta.get('azienda','')}")
-        )
-        st.markdown(
-            f'<a href="{li_search}" target="_blank" style="display:inline-block;margin-bottom:.8rem;padding:6px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;font-size:.8rem;font-weight:600;color:#374151;text-decoration:none">🔍 Cerca su LinkedIn</a>',
-            unsafe_allow_html=True
-        )
+        li_raw = meta.get("linkedin_url", "").strip()
+        if li_raw:
+            if not li_raw.startswith("http"):
+                li_raw = "https://" + li_raw
+            li_msg_url = li_raw.rstrip("/") + "/overlay/send-connection-form/"
+            st.markdown(
+                f'<div style="display:flex;gap:.6rem;margin-bottom:.8rem">'
+                f'<a href="{li_raw}" target="_blank" style="display:inline-block;padding:6px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;font-size:.8rem;font-weight:600;color:#374151;text-decoration:none">👤 Profilo LinkedIn</a>'
+                f'<a href="{li_msg_url}" target="_blank" style="display:inline-block;padding:6px 16px;background:#0d0f14;border:1px solid #0d0f14;border-radius:6px;font-size:.8rem;font-weight:600;color:#fff;text-decoration:none">💬 Invia richiesta</a>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            li_search = (
+                "https://www.linkedin.com/search/results/people/?keywords="
+                + urllib.parse.quote(f"{meta.get('prospect','')} {meta.get('azienda','')}")
+            )
+            st.markdown(
+                f'<a href="{li_search}" target="_blank" style="display:inline-block;margin-bottom:.8rem;padding:6px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;font-size:.8rem;font-weight:600;color:#374151;text-decoration:none">🔍 Cerca su LinkedIn</a>',
+                unsafe_allow_html=True
+            )
         a, b = st.columns(2)
         with a:
             render_linkedin(kit.get("li_connect",""), "Messaggio di connessione", uid="li1", max_chars=300)
@@ -722,7 +735,10 @@ if nav == "🎯 Generatore":
         ce, cf = st.columns(2)
         with ce: st.text_input("Settore", key="t_settore", placeholder="es. Metalmeccanico")
         with cf: st.text_input("Email prospect", key="t_email", placeholder="es. luca@alfasrl.it",
-                               help="Facoltativa. Abilita il bottone di invio diretto.")
+                               help="Facoltativa. Abilita i bottoni Gmail e Outlook.")
+        st.text_input("Profilo LinkedIn (URL)", key="t_linkedin",
+                      placeholder="es. linkedin.com/in/lucabianchi",
+                      help="Facoltativo. Abilita il bottone per aprire direttamente la chat LinkedIn.")
         st.text_area("Contesto aggiuntivo", key="t_contesto",
                      placeholder="Nuove assunzioni, espansione, problemi noti...", height=65)
         st.divider()
@@ -792,6 +808,7 @@ if nav == "🎯 Generatore":
                         "sn": sn, "sc": sc, "tone": tone, "lang": lang,
                         "ts": datetime.now().strftime("%d/%m/%Y %H:%M"), "elapsed": elapsed,
                         "email": st.session_state.get("t_email", ""),
+                        "linkedin_url": st.session_state.get("t_linkedin", ""),
                     }
                     q_score   = quality.get("totale") if quality else None
                     q_strong  = quality.get("forte") if quality else None
