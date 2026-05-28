@@ -195,6 +195,30 @@ hr { border-color: #e4eaf2 !important; margin: 1rem 0 !important; }
 .char-bar-wrap { margin-top: .45rem; }
 .char-bar-bg { background: #e2e8f0; border-radius: 4px; height: 3px; margin-top: .3rem; overflow: hidden; }
 .char-bar-fill { height: 3px; border-radius: 4px; transition: width .2s; }
+
+.trigger-row { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.9rem; }
+.trigger-pill { display:inline-flex; align-items:center; gap:.35rem; padding:4px 10px;
+                border-radius:20px; font-size:.73rem; font-weight:600; }
+.tp-funding    { background:#d1fae5; color:#065f46; }
+.tp-assunzioni { background:#dbeafe; color:#1e40af; }
+.tp-espansione { background:#ede9fe; color:#5b21b6; }
+.tp-prodotto   { background:#fef3c7; color:#92400e; }
+.tp-notizia    { background:#f1f5f9; color:#475569; }
+.tp-urgenza    { display:inline-block; width:7px; height:7px; border-radius:50%; }
+
+.subj-row { display:flex; align-items:center; justify-content:space-between;
+            padding:.65rem .9rem; background:#f8fafc; border:1px solid #e2e8f0;
+            border-radius:8px; margin-bottom:.4rem; gap:.8rem; }
+.subj-text { font-size:.88rem; color:#0f172a; font-weight:500; flex:1; }
+.subj-meta { font-size:.7rem; color:#8896aa; margin-top:2px; }
+.subj-score { font-size:1rem; font-weight:800; min-width:32px; text-align:center; }
+.subj-angolo { font-size:.65rem; font-weight:700; text-transform:uppercase;
+               letter-spacing:.8px; padding:2px 7px; border-radius:10px; white-space:nowrap; }
+.sa-curiosita  { background:#ede9fe; color:#5b21b6; }
+.sa-urgenza    { background:#fee2e2; color:#991b1b; }
+.sa-specificita{ background:#d1fae5; color:#065f46; }
+.sa-problema   { background:#fef3c7; color:#92400e; }
+.sa-roi        { background:#dbeafe; color:#1e40af; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -261,13 +285,22 @@ with st.sidebar:
 # ════════════════════════════════════════════════════════
 # HELPERS
 # ════════════════════════════════════════════════════════
-def build_prompt(sn, sc, sp, sv, tn, tc, tr, ti, ctx, tone, lang, ab=False):
+PERSONA_NOTES = {
+    "Generico":           "",
+    "CEO / Fondatore":    "Persona destinatario: CEO/Fondatore. Vuole visione strategica, crescita, vantaggio competitivo. Parla di mercato e ROI strategico. Zero dettagli operativi.",
+    "CFO / Finance":      "Persona destinatario: CFO. Vuole ROI misurabile, riduzione costi, rischio basso. Usa numeri concreti, percentuali, payback period.",
+    "Dir. Commerciale":   "Persona destinatario: Dir. Commerciale. Vuole più chiusure e pipeline forte. Parla di conversion rate e velocità del ciclo di vendita.",
+    "Head of Operations": "Persona destinatario: Head of Operations. Vuole efficienza e processi fluidi. Parla di tempo risparmiato, errori eliminati, scalabilità.",
+}
+
+def build_prompt(sn, sc, sp, sv, tn, tc, tr, ti, ctx, tone, lang, ab=False, persona="Generico"):
     ab_note = "Genera DUE versioni della Cold Email (VARIANTE A e VARIANTE B) con hook diversi. Separale SOLO con il token ===AB=== (nient'altro tra le due varianti). Inserisci entrambe nella sezione 1." if ab else ""
+    persona_note = PERSONA_NOTES.get(persona, "")
     return f"""Sei un SDR di élite. Crea un kit di prospecting B2B completo e iper-personalizzato.
 
 VENDITORE: {sn} | {sc} | {sp} | Value prop: {sv or "N/D"} | Tono: {tone}
 TARGET: {tn} | {tr} @ {tc} | Settore: {ti or "N/D"} | Contesto: {ctx or "N/D"}
-
+{("ISTRUZIONE PERSONA: " + persona_note) if persona_note else ""}
 Genera TUTTO in {lang}. {ab_note}
 OUTPUT: testo PULITO e pronto all'uso. VIETATO usare markdown (no #, no **, no ___, no ---). Niente titoli di sezione, niente numeri di sezione, niente intestazioni decorative.
 6 elementi separati SOLO dal token ===SEP===:
@@ -324,17 +357,43 @@ def research_prospect(name, company, role):
     try:
         from duckduckgo_search import DDGS
         with DDGS() as ddgs:
-            results = list(ddgs.text(f'"{company}" {role} 2024 2025', max_results=4))
+            results = list(ddgs.text(f'"{company}" 2024 2025', max_results=5))
         if not results:
-            return ""
-        snippets = "\n".join(f"- {r['title']}: {r['body'][:180]}" for r in results)
+            return None
+        snippets = "\n".join(f"- {r['title']}: {r['body'][:200]}" for r in results)
         resp = client.messages.create(
-            model="claude-haiku-4-5-20251001", max_tokens=250,
-            messages=[{"role": "user", "content": f"Estrai i 2-3 fatti più utili per contattare {name} ({role} in {company}). Conciso e pratico.\n\n{snippets}"}]
+            model="claude-haiku-4-5-20251001", max_tokens=350,
+            messages=[{"role": "user", "content": f"""Analizza queste notizie su {company} e identifica i trigger commerciali utili per un SDR che vuole contattare {name} ({role}).
+Rispondi SOLO con JSON valido:
+{{"triggers":[{{"tipo":"funding|assunzioni|espansione|prodotto|notizia","testo":"descrizione breve max 12 parole","urgenza":1}}],"sintesi":"una frase di contesto utile per personalizzare"}}
+(urgenza: 1=bassa, 2=media, 3=alta)
+
+Notizie:
+{snippets}"""}]
         )
-        return resp.content[0].text.strip()
+        text = resp.content[0].text.strip()
+        s = text.find("{"); e = text.rfind("}") + 1
+        return json.loads(text[s:e])
     except Exception:
-        return ""
+        return None
+
+
+def generate_subjects(cold_email, tn, tc, tr, ti, lang):
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=500,
+            messages=[{"role": "user", "content": f"""Sei un esperto di email marketing B2B. Basandoti su questa cold email per {tr} @ {tc} ({ti}), genera 5 oggetti alternativi in {lang} con angoli diversi.
+EMAIL: {cold_email[:600]}
+
+Rispondi SOLO con JSON valido:
+{{"oggetti":[{{"testo":"oggetto","angolo":"curiosità|urgenza|specificità|problema|roi","score":8,"motivo":"perché funziona in max 8 parole"}}]}}
+(score da 1 a 10)"""}]
+        )
+        text = resp.content[0].text.strip()
+        s = text.find("{"); e = text.rfind("}") + 1
+        return json.loads(text[s:e])
+    except Exception:
+        return None
 
 
 import html as _html
@@ -450,7 +509,7 @@ def format_kit_txt(kit, meta):
     )
 
 
-def render_kit_output(kit, meta, quality=None):
+def render_kit_output(kit, meta, quality=None, triggers=None, subjects=None):
     elapsed = meta.get("elapsed", "—")
     st.markdown(f"""
 <div class="stats-bar">
@@ -498,13 +557,49 @@ def render_kit_output(kit, meta, quality=None):
                        file_name=f"crm_{meta.get('prospect','').replace(' ','_')}.csv",
                        mime="text/csv", use_container_width=True, key=f"crm_{meta.get('prospect','')}")
 
+    # Trigger Intelligence
+    if triggers and triggers.get("triggers"):
+        tipo_css = {"funding":"tp-funding","assunzioni":"tp-assunzioni","espansione":"tp-espansione",
+                    "prodotto":"tp-prodotto","notizia":"tp-notizia"}
+        urgenza_color = {1:"#94a3b8", 2:"#f59e0b", 3:"#ef4444"}
+        pills = ""
+        for t in triggers["triggers"][:5]:
+            css = tipo_css.get(t.get("tipo","notizia"), "tp-notizia")
+            uc  = urgenza_color.get(t.get("urgenza",1), "#94a3b8")
+            pills += f'<span class="trigger-pill {css}"><span class="tp-urgenza" style="background:{uc}"></span>{t["testo"]}</span>'
+        st.markdown(f"""
+<p class="sec-label" style="margin-bottom:.4rem">Trigger Intelligence</p>
+<div class="trigger-row">{pills}</div>""", unsafe_allow_html=True)
+
     st.markdown("<br>", unsafe_allow_html=True)
-    tab1, tab2, tab3, tab4 = st.tabs(["📧 Cold Email", "💼 LinkedIn", "🔄 Follow-up", "📞 Cold Call"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📧 Cold Email", "📬 Oggetti Email", "💼 LinkedIn", "🔄 Follow-up", "📞 Cold Call"])
 
     with tab1:
         render_email(kit.get("cold_email",""), "Cold Email", uid="ce")
 
     with tab2:
+        st.markdown('<p class="c-label">5 varianti oggetto — scegli la più efficace</p>', unsafe_allow_html=True)
+        if subjects and subjects.get("oggetti"):
+            angolo_css = {"curiosità":"sa-curiosita","urgenza":"sa-urgenza",
+                          "specificità":"sa-specificita","problema":"sa-problema","roi":"sa-roi"}
+            for obj in subjects["oggetti"]:
+                score = obj.get("score", 0)
+                sc_color = "#16a34a" if score >= 8 else "#d97706" if score >= 6 else "#dc2626"
+                ang = obj.get("angolo","")
+                ang_css = angolo_css.get(ang, "sa-specificita")
+                st.markdown(f"""
+<div class="subj-row">
+  <div style="flex:1">
+    <div class="subj-text">{_html.escape(obj.get("testo",""))}</div>
+    <div class="subj-meta">{_html.escape(obj.get("motivo",""))}</div>
+  </div>
+  <span class="subj-angolo {ang_css}">{ang}</span>
+  <span class="subj-score" style="color:{sc_color}">{score}</span>
+</div>""", unsafe_allow_html=True)
+        else:
+            st.info("Genera un kit per vedere le varianti oggetto.")
+
+    with tab3:
         a, b = st.columns(2)
         with a:
             render_linkedin(kit.get("li_connect",""), "Messaggio di connessione", uid="li1", max_chars=300)
@@ -512,14 +607,14 @@ def render_kit_output(kit, meta, quality=None):
             st.markdown('<p class="c-label">Follow-up dopo accettazione</p>', unsafe_allow_html=True)
             _copyable_block(_clean(kit.get("li_followup","")), uid="li2")
 
-    with tab3:
+    with tab4:
         a, b = st.columns(2)
         with a:
             render_email(kit.get("fu1",""), "Follow-up 1 — Giorno 3", uid="fu1")
         with b:
             render_email(kit.get("fu2",""), "Follow-up 2 — Giorno 7", uid="fu2")
 
-    with tab4:
+    with tab5:
         st.markdown('<p class="c-label">Script cold call — 15 secondi</p>', unsafe_allow_html=True)
         _copyable_block(_clean(kit.get("cold_call","")), uid="cc")
         st.info("Leggi ad alta voce 3 volte prima di chiamare. Adattalo al tuo ritmo.")
@@ -598,9 +693,9 @@ if nav == "🎯 Generatore":
         with cc: tone = st.selectbox("Tono", ["Professionale","Diretto","Amichevole","Autorevole"])
         with cd: lang = st.selectbox("Lingua", ["Italiano","Inglese","Spagnolo","Francese","Tedesco"])
 
-        opt1, opt2 = st.columns(2)
-        with opt1: ab_mode     = st.checkbox("Genera varianti A/B", help="Due versioni della cold email")
-        with opt2: do_research = st.checkbox("Ricerca prospect", help="Cerca notizie recenti online")
+        persona = st.selectbox("Persona buyer", list(PERSONA_NOTES.keys()),
+                               help="Adatta il tono e il contenuto al ruolo del destinatario")
+        ab_mode = st.checkbox("Genera varianti A/B email", help="Due versioni della cold email con hook diversi")
 
         genera = st.button("🚀 Genera Kit Prospecting", type="primary", use_container_width=True)
 
@@ -634,22 +729,23 @@ if nav == "🎯 Generatore":
                     st.error("Compila: nome + azienda + prodotto (tuo) e nome + azienda + ruolo (prospect).")
                 else:
                     t0 = time.time()
-                    research_ctx = ""
-                    with st.spinner("Generando il kit — circa 45 secondi..."):
-                        if do_research:
-                            research_ctx = research_prospect(tn, tc, tr)
-                            if research_ctx:
-                                ctx = (ctx + "\n\nRicerca web:\n" + research_ctx).strip()
-                        prompt = build_prompt(sn, sc, sp, sv, tn, tc, tr, ti, ctx, tone, lang, ab_mode)
+                    with st.spinner("Analizzando il prospect e generando il kit..."):
+                        # Trigger Intelligence — sempre attiva
+                        triggers_data = research_prospect(tn, tc, tr)
+                        if triggers_data and triggers_data.get("sintesi"):
+                            ctx = (ctx + "\n\nIntelligence:\n" + triggers_data["sintesi"]).strip()
+
+                        prompt = build_prompt(sn, sc, sp, sv, tn, tc, tr, ti, ctx, tone, lang, ab_mode, persona)
                         resp = client.messages.create(
-                            model="claude-sonnet-4-6", max_tokens=3000,
+                            model="claude-sonnet-4-6", max_tokens=3200,
                             messages=[{"role": "user", "content": prompt}]
                         )
                         testo = resp.content[0].text
                         sezioni = [s.strip() for s in testo.split("===SEP===")]
                         chiavi  = ["cold_email","li_connect","li_followup","fu1","fu2","cold_call"]
                         kit = {k: sezioni[i] if i < len(sezioni) else "" for i, k in enumerate(chiavi)}
-                        quality = evaluate_quality(kit, tn, tc, tr, ti, tone)
+                        quality  = evaluate_quality(kit, tn, tc, tr, ti, tone)
+                        subjects = generate_subjects(kit.get("cold_email",""), tn, tc, tr, ti, lang)
 
                     elapsed = round(time.time() - t0, 1)
                     meta = {
@@ -663,15 +759,19 @@ if nav == "🎯 Generatore":
                     db.save_kit(username, meta, kit, elapsed, q_score, q_strong, q_improve)
                     if DEMO_MODE:
                         st.session_state.demo_uses += 1
-                    st.session_state.current_kit  = kit
-                    st.session_state.current_meta = meta
-                    st.session_state.current_qual = quality
+                    st.session_state.current_kit      = kit
+                    st.session_state.current_meta     = meta
+                    st.session_state.current_qual     = quality
+                    st.session_state.current_triggers = triggers_data
+                    st.session_state.current_subjects = subjects
 
         if st.session_state.get("current_kit"):
             render_kit_output(
                 st.session_state.current_kit,
                 st.session_state.current_meta,
-                st.session_state.get("current_qual")
+                st.session_state.get("current_qual"),
+                st.session_state.get("current_triggers"),
+                st.session_state.get("current_subjects"),
             )
             if DEMO_MODE:
                 remaining = max(0, DEMO_MAX_USES - st.session_state.demo_uses)
