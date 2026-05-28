@@ -415,8 +415,9 @@ def _clean(text):
 def _copyable_block(text, uid):
     display = _html.escape(text).replace("\n", "<br>")
     js_text  = _html.escape(text, quote=True)
-    n_lines  = text.count("\n") + 1
-    height   = max(110, n_lines * 26 + 72)
+    # Stima righe visive: ogni riga fisica può andare a capo ogni ~65 chars
+    visual_lines = sum(max(1, (len(l) + 64) // 65) for l in text.split("\n"))
+    height = max(120, visual_lines * 26 + 85)
     _components.html(f"""
 <!DOCTYPE html><html><head>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
