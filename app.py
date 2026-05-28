@@ -7,6 +7,7 @@ import io
 import os
 import time
 import zipfile
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -285,40 +286,50 @@ PERSONA_NOTES = {
 def build_prompt(sn, sc, sp, sv, tn, tc, tr, ti, ctx, tone, lang, ab=False, persona="Generico"):
     ab_note = "Genera DUE versioni della Cold Email (VARIANTE A e VARIANTE B) con hook diversi. Separale SOLO con il token ===AB=== (nient'altro tra le due varianti). Inserisci entrambe nella sezione 1." if ab else ""
     persona_note = PERSONA_NOTES.get(persona, "")
-    return f"""Sei un SDR di élite. Crea un kit di prospecting B2B completo e iper-personalizzato.
+    return f"""Sei un SDR senior con 10 anni di esperienza B2B. Crea un kit di prospecting completo e iper-personalizzato.
 
-VENDITORE: {sn} | {sc} | {sp} | Value prop: {sv or "N/D"} | Tono: {tone}
+VENDITORE: {sn} — {sc} — {sp} | Value prop: {sv or "N/D"} | Tono: {tone}
 TARGET: {tn} | {tr} @ {tc} | Settore: {ti or "N/D"} | Contesto: {ctx or "N/D"}
 {("ISTRUZIONE PERSONA: " + persona_note) if persona_note else ""}
 Genera TUTTO in {lang}. {ab_note}
-OUTPUT: testo PULITO e pronto all'uso. VIETATO usare markdown (no #, no **, no ___, no ---). Niente titoli di sezione, niente numeri di sezione, niente intestazioni decorative.
+
+REGOLE ASSOLUTE — rispettale tutte senza eccezioni:
+- Testo PULITO, pronto da copiare e inviare senza modifiche
+- VIETATO markdown (no #, no **, no ___, no ---)
+- VIETATO trattini lunghi (— oppure –): usa virgole, due punti o punto fermo
+- VIETATO punti elenco e liste puntate
+- VIETATO aperture generiche ("Spero questa email la trovi bene", "Mi permetto di contattarla", "La contatto perché")
+- Scrivi come una persona reale, non come un AI: frasi dirette, naturali, senza enfasi artificiale
+- Paragrafi brevi, max 2-3 righe ciascuno
+- Niente intestazioni di sezione, niente numerazioni
+
 6 elementi separati SOLO dal token ===SEP===:
 
 1. COLD EMAIL
-Oggetto: [specifico, cita dettaglio su {tc} o {tr}]
-[Corpo max 150 parole. Apertura personalizzata su {tc}/{ti}. Problema reale di {tr}. Come {sc} lo risolve. CTA morbida. NO "Spero questa email la trovi bene".]
+Oggetto: [specifico, max 7 parole, senza punto interrogativo, cita {tc} o {ti} o {tr}]
+[Corpo max 140 parole. Struttura: prima riga — apertura concreta che dimostra ricerca reale su {tc} o {ti}. Seconda parte — problema o opportunità che un {tr} riconosce nella sua realtà. Terza parte — come {sc} lo affronta in modo specifico. Ultima riga — CTA soft: domanda aperta o proposta di 15 minuti precisi.]
 
 ===SEP===
 2. LINKEDIN — CONNESSIONE
-[Max 280 caratteri. NON "Ho visto il tuo profilo". Umano, specifico.]
+[Max 280 caratteri. Umano, specifico su {tc} o {ti}. NON "Ho visto il tuo profilo". Diretto, niente piaggeria.]
 
 ===SEP===
 3. LINKEDIN — FOLLOW-UP
-[2-3 frasi. Insight per {ti}. Zero pressione.]
+[2-3 frasi dopo l'accettazione. Insight concreto utile per {ti}. Zero pressione, zero pitch diretto.]
 
 ===SEP===
 4. FOLLOW-UP EMAIL 1 — Giorno 3
-Oggetto: [angolo diverso]
-[max 100 parole. Case study o dato {ti}. CTA morbida.]
+Oggetto: [angolo diverso dalla cold email, max 6 parole]
+[Max 90 parole. Case study concreto o dato di settore per {ti}. CTA morbida.]
 
 ===SEP===
 5. FOLLOW-UP EMAIL 2 — Giorno 7
-Oggetto: [diretto]
-[max 80 parole. FOMO o domanda diretta. Porta aperta.]
+Oggetto: [diretto, max 5 parole]
+[Max 70 parole. Domanda diretta o scenario FOMO leggero. Porta aperta.]
 
 ===SEP===
 6. COLD CALL — 15 secondi
-[Script naturale. Chi sei, hook su {tc}, valore, domanda aperta.]"""
+[Script parlato e naturale. Chi sei, hook specifico su {tc}, valore in una frase, domanda aperta. NO tono da call center.]"""
 
 
 def evaluate_quality(kit, tn, tc, tr, ti, tone):
@@ -572,6 +583,30 @@ def render_kit_output(kit, meta, quality=None, triggers=None, subjects=None):
 
     with tab1:
         render_email(kit.get("cold_email",""), "Cold Email", uid="ce")
+        prospect_email = meta.get("email", "")
+        subj_ce, body_ce = _parse_email(kit.get("cold_email", ""))
+        if prospect_email:
+            gmail_url = (
+                "https://mail.google.com/mail/?view=cm&fs=1"
+                f"&to={urllib.parse.quote(prospect_email)}"
+                f"&su={urllib.parse.quote(subj_ce)}"
+                f"&body={urllib.parse.quote(body_ce)}"
+            )
+            outlook_url = (
+                "https://outlook.office.com/mail/deeplink/compose"
+                f"?to={urllib.parse.quote(prospect_email)}"
+                f"&subject={urllib.parse.quote(subj_ce)}"
+                f"&body={urllib.parse.quote(body_ce)}"
+            )
+            st.markdown(
+                f'<div style="display:flex;gap:.6rem;margin-top:.6rem">'
+                f'<a href="{gmail_url}" target="_blank" style="display:inline-block;padding:6px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;font-size:.8rem;font-weight:600;color:#374151;text-decoration:none">📤 Apri in Gmail</a>'
+                f'<a href="{outlook_url}" target="_blank" style="display:inline-block;padding:6px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;font-size:.8rem;font-weight:600;color:#374151;text-decoration:none">📤 Apri in Outlook</a>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.caption("Aggiungi l'email del prospect nel form per abilitare l'invio diretto.")
 
     with tab2:
         st.markdown('<p class="c-label">5 varianti oggetto — scegli la più efficace</p>', unsafe_allow_html=True)
@@ -593,6 +628,14 @@ def render_kit_output(kit, meta, quality=None, triggers=None, subjects=None):
             st.info("Genera un kit per vedere le varianti oggetto.")
 
     with tab3:
+        li_search = (
+            "https://www.linkedin.com/search/results/people/?keywords="
+            + urllib.parse.quote(f"{meta.get('prospect','')} {meta.get('azienda','')}")
+        )
+        st.markdown(
+            f'<a href="{li_search}" target="_blank" style="display:inline-block;margin-bottom:.8rem;padding:6px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;font-size:.8rem;font-weight:600;color:#374151;text-decoration:none">🔍 Cerca su LinkedIn</a>',
+            unsafe_allow_html=True
+        )
         a, b = st.columns(2)
         with a:
             render_linkedin(kit.get("li_connect",""), "Messaggio di connessione", uid="li1", max_chars=300)
@@ -676,7 +719,10 @@ if nav == "🎯 Generatore":
         with ca: st.text_input("Nome", key="t_nome", placeholder="es. Luca Bianchi")
         with cb: st.text_input("Ruolo", key="t_ruolo", placeholder="es. Dir. Commerciale")
         st.text_input("Azienda", key="t_azienda", placeholder="es. Alfa Componenti Srl")
-        st.text_input("Settore", key="t_settore", placeholder="es. Metalmeccanico")
+        ce, cf = st.columns(2)
+        with ce: st.text_input("Settore", key="t_settore", placeholder="es. Metalmeccanico")
+        with cf: st.text_input("Email prospect", key="t_email", placeholder="es. luca@alfasrl.it",
+                               help="Facoltativa. Abilita il bottone di invio diretto.")
         st.text_area("Contesto aggiuntivo", key="t_contesto",
                      placeholder="Nuove assunzioni, espansione, problemi noti...", height=65)
         st.divider()
@@ -745,6 +791,7 @@ if nav == "🎯 Generatore":
                         "prospect": tn, "azienda": tc, "ruolo": tr, "settore": ti,
                         "sn": sn, "sc": sc, "tone": tone, "lang": lang,
                         "ts": datetime.now().strftime("%d/%m/%Y %H:%M"), "elapsed": elapsed,
+                        "email": st.session_state.get("t_email", ""),
                     }
                     q_score   = quality.get("totale") if quality else None
                     q_strong  = quality.get("forte") if quality else None
