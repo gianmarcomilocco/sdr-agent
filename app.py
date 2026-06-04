@@ -756,7 +756,11 @@ if nav == "🎯 Generatore":
                     first = parts[0] if parts else ""
                     last  = parts[1] if len(parts) > 1 else ""
                     company = st.session_state.get("t_azienda", "").strip()
-                    if first and company:
+                    if not first or not last:
+                        st.warning("Inserisci nome E cognome del prospect (es. 'Mario Rossi').")
+                    elif not company:
+                        st.warning("Inserisci il nome dell'azienda.")
+                    else:
                         with st.spinner("Hunter..."):
                             try:
                                 res = hunter.find_email(first, last, company=company)
@@ -769,8 +773,6 @@ if nav == "🎯 Generatore":
                             except Exception as e:
                                 st.session_state["_hunter_msg"] = f"Errore: {e}"
                         st.rerun()
-                    else:
-                        st.warning("Compila Nome e Azienda prima di cercare.")
 
         st.text_input("Profilo LinkedIn (URL)", key="t_linkedin",
                       placeholder="es. linkedin.com/in/lucabianchi",
