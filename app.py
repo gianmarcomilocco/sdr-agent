@@ -17,7 +17,6 @@ import streamlit_authenticator as stauth
 load_dotenv(Path(__file__).parent.parent / ".env")
 import db
 import apollo
-import hunter
 db.init()
 
 DEMO_MODE      = os.getenv("DEMO_MODE", "false").lower() == "true"
@@ -738,41 +737,6 @@ if nav == "🎯 Generatore":
         with cf: st.text_input("Email prospect", key="t_email", placeholder="es. luca@alfasrl.it",
                                help="Facoltativa. Abilita i bottoni Gmail e Outlook.")
 
-        # Hunter email finder
-        if hunter.configured():
-            hc1, hc2 = st.columns([3, 1])
-            with hc1:
-                if st.session_state.get("_hunter_msg"):
-                    msg = st.session_state["_hunter_msg"]
-                    if msg.startswith("✅"):
-                        st.success(msg)
-                    else:
-                        st.warning(msg)
-            with hc2:
-                if st.button("🔍 Trova email", use_container_width=True, key="hunter_find",
-                             help="Cerca l'email del prospect con Hunter.io"):
-                    nome = st.session_state.get("t_nome", "").strip()
-                    parts = nome.split(" ", 1)
-                    first = parts[0] if parts else ""
-                    last  = parts[1] if len(parts) > 1 else ""
-                    company = st.session_state.get("t_azienda", "").strip()
-                    if not first or not last:
-                        st.warning("Inserisci nome E cognome del prospect (es. 'Mario Rossi').")
-                    elif not company:
-                        st.warning("Inserisci il nome dell'azienda.")
-                    else:
-                        with st.spinner("Hunter..."):
-                            try:
-                                res = hunter.find_email(first, last, company=company)
-                                if res.get("email"):
-                                    st.session_state.t_email = res["email"]
-                                    score = res.get("score", 0)
-                                    st.session_state["_hunter_msg"] = f"✅ {res['email']} — confidenza {score}%"
-                                else:
-                                    st.session_state["_hunter_msg"] = "Nessuna email trovata per questo nominativo."
-                            except Exception as e:
-                                st.session_state["_hunter_msg"] = f"Errore: {e}"
-                        st.rerun()
 
         st.text_input("Profilo LinkedIn (URL)", key="t_linkedin",
                       placeholder="es. linkedin.com/in/lucabianchi",

@@ -20,8 +20,6 @@ services:
         sync: false   # set manually in Render dashboard (secret)
       - key: APOLLO_API_KEY
         sync: false   # set manually in Render dashboard (secret)
-      - key: HUNTER_API_KEY
-        sync: false   # set manually in Render dashboard (secret)
 
   # ── CLIENT instance (private, login required, unlimited) ───────────────
   # Duplicate this block for each paying client and change the name.
