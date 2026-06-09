@@ -16,10 +16,14 @@ services:
         value: "gianmarco.milocco@gmail.com"
       - key: CONTACT_PHONE
         value: ""
+      - key: DATA_RETENTION_DAYS
+        value: "365"
+      - key: IP_HASH_SALT
+        sync: false
       - key: ANTHROPIC_API_KEY
-        sync: false   # set manually in Render dashboard (secret)
+        sync: false
       - key: APOLLO_API_KEY
-        sync: false   # set manually in Render dashboard (secret)
+        sync: false
 
   # ── CLIENT instance (private, login required, unlimited) ───────────────
   # Duplicate this block for each paying client and change the name.
@@ -31,5 +35,15 @@ services:
   #   envVars:
   #     - key: DEMO_MODE
   #       value: "false"
+  #     - key: DATA_RETENTION_DAYS
+  #       value: "365"
+  #     - key: ADMIN_USERNAME
+  #       sync: false
+  #     - key: ADMIN_PASSWORD_HASH
+  #       sync: false
+  #     - key: AUTH_COOKIE_KEY
+  #       sync: false
   #     - key: ANTHROPIC_API_KEY
+  #       sync: false
+  #     - key: APOLLO_API_KEY
   #       sync: false

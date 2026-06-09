@@ -17,7 +17,10 @@ import streamlit_authenticator as stauth
 load_dotenv(Path(__file__).parent.parent / ".env")
 import db
 import apollo
+import re as _re
 db.init()
+db.purge_old_kits(int(os.getenv("DATA_RETENTION_DAYS", "365")))
+db.purge_old_demo_visits(30)
 
 DEMO_MODE      = os.getenv("DEMO_MODE", "false").lower() == "true"
 DEMO_MAX_USES  = int(os.getenv("DEMO_MAX_USES", "2"))
@@ -220,9 +223,26 @@ if DEMO_MODE:
         st.session_state.demo_ip   = _visitor_ip
         st.session_state.demo_uses = db.get_demo_uses(_visitor_ip)
 else:
-    cfg_path = Path(__file__).parent / "auth_config.yaml"
-    with open(cfg_path) as f:
-        cfg = yaml.load(f, Loader=SafeLoader)
+    _admin_hash = os.getenv("ADMIN_PASSWORD_HASH", "")
+    _admin_user = os.getenv("ADMIN_USERNAME", "admin")
+    _cookie_key = os.getenv("AUTH_COOKIE_KEY", "")
+    if _admin_hash and _cookie_key:
+        cfg = {
+            "credentials": {
+                "usernames": {
+                    _admin_user: {
+                        "email": f"{_admin_user}@sdragent.io",
+                        "name": _admin_user.title(),
+                        "password": _admin_hash,
+                    }
+                }
+            },
+            "cookie": {"name": "sdr_agent_auth", "key": _cookie_key, "expiry_days": 7},
+        }
+    else:
+        cfg_path = Path(__file__).parent / "auth_config.yaml"
+        with open(cfg_path) as f:
+            cfg = yaml.load(f, Loader=SafeLoader)
 
     authenticator = stauth.Authenticate(
         cfg["credentials"], cfg["cookie"]["name"],
@@ -782,7 +802,10 @@ if nav == "🎯 Generatore":
                 ti  = st.session_state.get("t_settore","")
                 ctx = st.session_state.get("t_contesto","")
 
-                if not all([sn, sc, sp, tn, tc, tr]):
+                t_email_val = st.session_state.get("t_email", "").strip()
+                if t_email_val and not _re.match(r"^[^@\s]{1,64}@[^@\s]{1,255}$", t_email_val):
+                    st.error("L'email del prospect non è valida.")
+                elif not all([sn, sc, sp, tn, tc, tr]):
                     st.error("Compila: nome + azienda + prodotto (tuo) e nome + azienda + ruolo (prospect).")
                 else:
                     t0 = time.time()
@@ -979,6 +1002,11 @@ elif nav == "📦 Bulk CSV":
         with bc1: b_tone = st.selectbox("Tono", ["Professionale","Diretto","Amichevole","Autorevole"])
         with bc2: b_lang = st.selectbox("Lingua", ["Italiano","Inglese","Spagnolo"])
 
+        BULK_MAX = 20
+        if len(reader) > BULK_MAX:
+            st.warning(f"Il file contiene {len(reader)} righe. Verranno elaborati solo i primi {BULK_MAX} prospect per sessione.")
+            reader = reader[:BULK_MAX]
+
         if st.button("🚀 Genera kit per tutti i prospect", type="primary"):
             if not all([sn, sc, sp]):
                 st.error("Seleziona un profilo venditore valido.")
@@ -1063,10 +1091,21 @@ elif nav == "📚 Archivio":
 </table>""", unsafe_allow_html=True)
 
         st.divider()
-        st.markdown('<p class="sec-label">Carica un kit dallo storico</p>', unsafe_allow_html=True)
+
+        col_load, col_del = st.columns([3, 1])
+        with col_load:
+            st.markdown('<p class="sec-label">Carica un kit dallo storico</p>', unsafe_allow_html=True)
         options = {f"{h['prospect_name']} @ {h['prospect_co']} — {h['generated_at'][:16]}": h["id"] for h in history}
         sel = st.selectbox("Seleziona kit", list(options.keys()), label_visibility="collapsed")
-        if st.button("Carica questo kit", type="primary"):
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            load_btn = st.button("Carica questo kit", type="primary")
+        with c2:
+            if st.button("🗑 Elimina", help="Elimina definitivamente questo kit"):
+                db.delete_kit(options[sel], username)
+                st.success("Kit eliminato.")
+                st.rerun()
+        if load_btn:
             row = db.get_kit(options[sel])
             if row:
                 meta = {

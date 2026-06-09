@@ -1,5 +1,7 @@
 import sqlite3
 import json
+import hashlib
+import os
 from pathlib import Path
 
 DB = Path(__file__).parent / "sdr_agent.db"
@@ -49,21 +51,32 @@ def init():
         );
         """)
 
-# ── Demo visits ──────────────────────────────────────────
+# ── Demo visits (IP stored as one-way hash — GDPR compliant) ─────────────
+
+_IP_SALT = os.getenv("IP_HASH_SALT", "sdr_default_salt_2025")
+
+def _hash_ip(ip: str) -> str:
+    return hashlib.sha256(f"{_IP_SALT}:{ip}".encode()).hexdigest()
 
 def get_demo_uses(ip):
+    hashed = _hash_ip(ip)
     with conn() as c:
-        r = c.execute("SELECT uses FROM demo_visits WHERE ip=?", (ip,)).fetchone()
+        r = c.execute("SELECT uses FROM demo_visits WHERE ip=?", (hashed,)).fetchone()
         return r["uses"] if r else 0
 
 def increment_demo_uses(ip):
+    hashed = _hash_ip(ip)
     with conn() as c:
         c.execute("""
             INSERT INTO demo_visits (ip, uses, last_visit) VALUES (?, 1, datetime('now'))
             ON CONFLICT(ip) DO UPDATE SET uses = uses + 1, last_visit = datetime('now')
-        """, (ip,))
-        r = c.execute("SELECT uses FROM demo_visits WHERE ip=?", (ip,)).fetchone()
+        """, (hashed,))
+        r = c.execute("SELECT uses FROM demo_visits WHERE ip=?", (hashed,)).fetchone()
         return r["uses"] if r else 1
+
+def purge_old_demo_visits(days=30):
+    with conn() as c:
+        c.execute("DELETE FROM demo_visits WHERE datetime(last_visit) < datetime('now', ?)", (f"-{int(days)} days",))
 
 # ── Seller profiles ──────────────────────────────────────
 
@@ -124,3 +137,11 @@ def get_kit(kid):
         d["kit"] = json.loads(d.pop("kit_json"))
         return d
     return None
+
+def delete_kit(kid, username):
+    with conn() as c:
+        c.execute("DELETE FROM kits WHERE id=? AND username=?", (kid, username))
+
+def purge_old_kits(days=365):
+    with conn() as c:
+        c.execute("DELETE FROM kits WHERE datetime(generated_at) < datetime('now', ?)", (f"-{int(days)} days",))
