@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI SDR Agent — Kit di prospecting B2B in 60 secondi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #f8f9fc;
+    color: #0d0f1a;
+    min-height: 100vh;
+  }
+
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #eaecf0;
+    padding: 0 5%;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1rem; color: #0d0f1a; text-decoration: none; }
+  .nav-logo-mark { width: 30px; height: 30px; background: #0ea5e9; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .nav-links { display: flex; gap: 1.8rem; list-style: none; }
+  .nav-links a { font-size: .875rem; font-weight: 500; color: #5a6278; text-decoration: none; transition: color .15s; }
+  .nav-links a:hover { color: #0d0f1a; }
+  .nav-cta { background: #0d0f1a; color: #fff; padding: 8px 18px; border-radius: 8px; font-size: .875rem; font-weight: 600; text-decoration: none; transition: background .15s; }
+  .nav-cta:hover { background: #0ea5e9; }
+
+  .hero {
+    max-width: 1080px; margin: 0 auto;
+    padding: 6rem 5% 4rem;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #e0f2fe; color: #0284c7;
+    padding: 5px 14px; border-radius: 100px;
+    font-size: .78rem; font-weight: 600; letter-spacing: .02em;
+    margin-bottom: 1.6rem;
+    border: 1px solid #bae6fd;
+  }
+  .hero-badge span { width: 6px; height: 6px; background: #0ea5e9; border-radius: 50%; }
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800; line-height: 1.12;
+    letter-spacing: -.04em; color: #0d0f1a;
+    margin-bottom: 1.4rem;
+  }
+  h1 em { font-style: normal; color: #0ea5e9; }
+  .hero-sub {
+    font-size: 1.1rem; color: #5a6278; line-height: 1.7;
+    max-width: 600px; margin: 0 auto 2.4rem;
+  }
+  .hero-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: #0d0f1a; color: #fff;
+    padding: 13px 28px; border-radius: 10px;
+    font-size: .94rem; font-weight: 600;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    transition: background .15s, transform .1s;
+  }
+  .btn-primary:hover { background: #0ea5e9; transform: translateY(-1px); }
+  .btn-secondary {
+    background: #fff; color: #374151;
+    padding: 13px 28px; border-radius: 10px;
+    font-size: .94rem; font-weight: 600;
+    text-decoration: none; border: 1.5px solid #e4e8f0;
+    transition: border-color .15s, transform .1s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-secondary:hover { border-color: #0d0f1a; transform: translateY(-1px); }
+
+  /* Steps */
+  .steps {
+    max-width: 900px; margin: 5rem auto;
+    padding: 0 5%;
+  }
+  .section-label {
+    text-align: center;
+    font-size: .7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .12em; color: #9aa0b4; margin-bottom: .75rem;
+  }
+  .section-title {
+    text-align: center;
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 800; letter-spacing: -.03em;
+    margin-bottom: 3rem; color: #0d0f1a;
+  }
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.2rem;
+  }
+  .step-card {
+    background: #fff; border: 1.5px solid #e4e8f0;
+    border-radius: 14px; padding: 1.6rem;
+    position: relative;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .step-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.08); transform: translateY(-2px); }
+  .step-num {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: #0ea5e9; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem; font-weight: 800;
+    margin-bottom: 1rem;
+  }
+  .step-card h3 { font-size: .95rem; font-weight: 700; margin-bottom: .4rem; color: #0d0f1a; }
+  .step-card p { font-size: .84rem; color: #5a6278; line-height: 1.6; }
+
+  /* Output cards */
+  .outputs {
+    max-width: 1080px; margin: 0 auto 5rem;
+    padding: 0 5%;
+  }
+  .outputs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.2rem;
+  }
+  .output-card {
+    background: #fff; border: 1.5px solid #e4e8f0;
+    border-radius: 14px; padding: 1.6rem;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .output-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.08); transform: translateY(-2px); }
+  .output-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; margin-bottom: 1rem;
+  }
+  .output-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: .4rem; color: #0d0f1a; }
+  .output-card p { font-size: .875rem; color: #5a6278; line-height: 1.6; }
+  .output-tag {
+    display: inline-block; margin-top: .8rem;
+    background: #e0f2fe; color: #0284c7;
+    padding: 2px 9px; border-radius: 5px;
+    font-size: .7rem; font-weight: 700; letter-spacing: .04em;
+  }
+
+  /* Tips */
+  .tips {
+    max-width: 860px; margin: 0 auto 5rem;
+    padding: 0 5%;
+  }
+  .tip-box {
+    background: #fff; border: 1.5px solid #e4e8f0;
+    border-radius: 14px; padding: 1.4rem 1.6rem;
+    margin-bottom: .9rem;
+    display: flex; gap: 1rem; align-items: flex-start;
+  }
+  .tip-emoji { font-size: 1.4rem; flex-shrink: 0; line-height: 1.3; }
+  .tip-box h4 { font-size: .92rem; font-weight: 700; color: #0d0f1a; margin-bottom: .3rem; }
+  .tip-box p { font-size: .84rem; color: #5a6278; line-height: 1.6; }
+
+  /* Pricing */
+  .pricing {
+    max-width: 900px; margin: 0 auto 5rem;
+    padding: 0 5%;
+  }
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.2rem; margin-top: 3rem;
+  }
+  .plan {
+    background: #fff; border: 1.5px solid #e4e8f0;
+    border-radius: 16px; padding: 2rem;
+    position: relative;
+  }
+  .plan.featured { background: #0d0f1a; border-color: #0d0f1a; color: #fff; }
+  .plan.featured .plan-name { color: rgba(255,255,255,.6); }
+  .plan.featured .plan-sub { color: rgba(255,255,255,.5); }
+  .plan.featured .plan-feature { color: rgba(255,255,255,.75); border-color: rgba(255,255,255,.08); }
+  .plan-badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: #0ea5e9; color: #fff;
+    padding: 3px 12px; border-radius: 100px;
+    font-size: .7rem; font-weight: 700; letter-spacing: .05em; white-space: nowrap;
+  }
+  .plan-name { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #9aa0b4; margin-bottom: .5rem; }
+  .plan-price { font-size: 2.4rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; margin-bottom: .3rem; }
+  .plan-price span { font-size: 1rem; font-weight: 500; letter-spacing: 0; }
+  .plan-sub { font-size: .82rem; color: #5a6278; margin-bottom: 1.4rem; }
+  .plan-features { list-style: none; margin-bottom: 1.6rem; }
+  .plan-feature { font-size: .84rem; color: #374151; padding: .45rem 0; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: .5rem; }
+  .plan-feature:last-child { border: none; }
+  .plan-feature::before { content: '✓'; font-weight: 700; color: #10b981; flex-shrink: 0; }
+  .plan.featured .plan-feature { color: rgba(255,255,255,.75); }
+  .plan-btn {
+    width: 100%; padding: 12px; border-radius: 10px;
+    font-size: .9rem; font-weight: 600; cursor: pointer;
+    border: none; text-align: center; display: block;
+    text-decoration: none; transition: opacity .15s;
+  }
+  .plan-btn:hover { opacity: .85; }
+  .plan .plan-btn { background: #0d0f1a; color: #fff; }
+  .plan.featured .plan-btn { background: #fff; color: #0d0f1a; }
+
+  /* CTA finale */
+  .demo-cta {
+    max-width: 700px; margin: 0 auto 5rem;
+    padding: 3rem 5%;
+    background: linear-gradient(135deg, #0d0f1a 0%, #0c4a6e 100%);
+    border-radius: 20px; text-align: center; color: #fff;
+  }
+  .demo-cta h2 { font-size: 1.8rem; font-weight: 800; letter-spacing: -.03em; margin-bottom: .8rem; }
+  .demo-cta p { color: rgba(255,255,255,.65); font-size: .94rem; margin-bottom: 1.6rem; line-height: 1.6; }
+  .demo-cta .btn-primary { background: #fff; color: #0d0f1a; }
+  .demo-cta .btn-primary:hover { background: #e0f2fe; color: #0284c7; }
+
+  footer {
+    border-top: 1px solid #e4e8f0; padding: 2rem 5%;
+    text-align: center; font-size: .82rem; color: #9aa0b4;
+  }
+
+  @media (max-width: 600px) {
+    .nav-links { display: none; }
+    .steps-grid, .outputs-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-mark">🎯</div>
+    AI SDR Agent
+  </a>
+  <ul class="nav-links">
+    <li><a href="#come-funziona">Come funziona</a></li>
+    <li><a href="#output">Output</a></li>
+    <li><a href="#consigli">Consigli</a></li>
+    <li><a href="#pricing">Prezzi</a></li>
+  </ul>
+  <a href="https://sdr-agent-e9qt.onrender.com" target="_blank" class="nav-cta">Apri l'agent →</a>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge"><span></span>Powered by Claude AI (Anthropic)</div>
+  <h1>Kit di prospecting B2B<br><em>in 60 secondi</em></h1>
+  <p class="hero-sub">
+    Inserisci prospect e prodotto. L'agente AI genera cold email, sequenze LinkedIn, follow-up e cold call script — personalizzati, pronti all'uso.
+  </p>
+  <div class="hero-actions">
+    <a href="https://sdr-agent-e9qt.onrender.com" target="_blank" class="btn-primary">🚀 Prova gratis</a>
+    <a href="mailto:gianmarco.milocco@squpgelato.it" class="btn-secondary">Richiedi accesso enterprise →</a>
+  </div>
+</section>
+
+<!-- Come funziona -->
+<section class="steps" id="come-funziona">
+  <div class="section-label">Come funziona</div>
+  <div class="section-title">4 passaggi, kit completo</div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <h3>Il tuo profilo</h3>
+      <p>Nome, azienda, prodotto o servizio che vendi e il tuo vantaggio competitivo principale.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <h3>Il prospect target</h3>
+      <p>Nome, ruolo, azienda e settore del contatto da approcciare. Più dettagli dai, più il kit è personalizzato.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <h3>Scegli le opzioni</h3>
+      <p>Tono (professionale, diretto, amichevole), lingua, buyer persona e se vuoi le varianti A/B email.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <h3>Genera e usa</h3>
+      <p>Clicca "Genera". In circa 30–60 secondi hai 6 asset pronti da copiare e inviare direttamente.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Output -->
+<section class="outputs" id="output">
+  <div class="section-label">Output generati</div>
+  <div class="section-title">Tutto il kit in un click</div>
+  <div class="outputs-grid">
+    <div class="output-card">
+      <div class="output-icon" style="background:#e0f2fe">✉️</div>
+      <h3>Cold Email</h3>
+      <p>Oggetto testato, hook personalizzato sul prospect, CTA chiaro. Pronta da incollare in Gmail o Outlook con i bottoni di accesso diretto.</p>
+      <span class="output-tag">PRONTO ALL'USO</span>
+    </div>
+    <div class="output-card">
+      <div class="output-icon" style="background:#f0fdf4">💼</div>
+      <h3>LinkedIn Connection Request</h3>
+      <p>Messaggio di connessione di 200 caratteri max, personalizzato sul ruolo e sull'azienda del prospect.</p>
+      <span class="output-tag">MAX 200 CARATTERI</span>
+    </div>
+    <div class="output-card">
+      <div class="output-icon" style="background:#fefce8">🔁</div>
+      <h3>LinkedIn Follow-up</h3>
+      <p>Messaggio di follow-up dopo l'accettazione della connessione. Aggancia il valore senza essere invasivo.</p>
+      <span class="output-tag">GIORNO 2–3</span>
+    </div>
+    <div class="output-card">
+      <div class="output-icon" style="background:#fff1f2">📅</div>
+      <h3>Email Follow-up ×2</h3>
+      <p>Sequenza di due follow-up email (giorno 3 e giorno 7) con angoli diversi per massimizzare il tasso di risposta.</p>
+      <span class="output-tag">SEQUENZA 7 GG</span>
+    </div>
+    <div class="output-card">
+      <div class="output-icon" style="background:#f5f3ff">📞</div>
+      <h3>Cold Call Script</h3>
+      <p>Script parlato di 15 secondi: chi sei, hook specifico sull'azienda, valore in una frase, domanda aperta. Nessun tono da call center.</p>
+      <span class="output-tag">15 SECONDI</span>
+    </div>
+    <div class="output-card">
+      <div class="output-icon" style="background:#f0fdf4">⭐</div>
+      <h3>Quality Score AI</h3>
+      <p>Valutazione automatica del kit (1–10) su personalizzazione, CTA e tono. Con il punto di forza e cosa migliorare.</p>
+      <span class="output-tag">FEEDBACK ISTANTANEO</span>
+    </div>
+  </div>
+</section>
+
+<!-- Consigli d'uso -->
+<section class="tips" id="consigli">
+  <div class="section-label" style="text-align:center">Consigli d'uso</div>
+  <div class="section-title">Come ottenere il massimo</div>
+
+  <div class="tip-box">
+    <div class="tip-emoji">✏️</div>
+    <div>
+      <h4>Più contesto = kit migliore</h4>
+      <p>Nel campo "Contesto aggiuntivo" inserisci quello che sai sul prospect: nuove assunzioni, espansione in un nuovo mercato, un problema che stai risolvendo. Claude usa queste informazioni per personalizzare ogni asset.</p>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <div class="tip-emoji">🔀</div>
+    <div>
+      <h4>Usa le varianti A/B</h4>
+      <p>Attiva "Genera varianti A/B email" per ricevere due versioni della cold email con hook diversi. Testa quale converte meglio con il tuo segmento.</p>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <div class="tip-emoji">🎭</div>
+    <div>
+      <h4>Scegli la buyer persona giusta</h4>
+      <p>Il selettore "Persona buyer" adatta il linguaggio al ruolo del destinatario: CEO, Sales, Marketing, HR o IT hanno priorità diverse. Un messaggio scritto "per un CFO" non funziona con un Head of Sales.</p>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <div class="tip-emoji">📦</div>
+    <div>
+      <h4>Bulk generation per campagne</h4>
+      <p>Hai una lista di prospect? Carica un CSV con le colonne nome, azienda, ruolo, settore e scarica tutti i kit in un colpo solo in formato .zip + export CRM. Max 20 prospect per volta.</p>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <div class="tip-emoji">📚</div>
+    <div>
+      <h4>Salva nell'archivio</h4>
+      <p>Ogni kit generato viene salvato nell'Archivio. Puoi riaprirlo, scaricarlo in PDF o eliminarlo. Utile per tenere traccia dei prospect già contattati.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="pricing" id="pricing">
+  <div class="section-label" style="text-align:center">Prezzi</div>
+  <div class="section-title" style="text-align:center">Semplice e scalabile</div>
+  <div class="pricing-grid">
+    <div class="plan">
+      <div class="plan-name">Demo</div>
+      <div class="plan-price">Gratis</div>
+      <div class="plan-sub">Per provare l'agente</div>
+      <ul class="plan-features">
+        <li class="plan-feature">2 kit completi</li>
+        <li class="plan-feature">Tutti gli output (email, LinkedIn, call)</li>
+        <li class="plan-feature">Quality Score AI</li>
+        <li class="plan-feature">Nessuna carta richiesta</li>
+      </ul>
+      <a href="https://sdr-agent-e9qt.onrender.com" target="_blank" class="plan-btn">Inizia gratis →</a>
+    </div>
+    <div class="plan featured">
+      <div class="plan-badge">PIÙ SCELTO</div>
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-price">€299<span>/mese</span></div>
+      <div class="plan-sub">Per team sales e agenzie</div>
+      <ul class="plan-features">
+        <li class="plan-feature">Kit illimitati</li>
+        <li class="plan-feature">Bulk generation CSV</li>
+        <li class="plan-feature">Archivio completo</li>
+        <li class="plan-feature">Varianti A/B</li>
+        <li class="plan-feature">Trigger Intelligence</li>
+        <li class="plan-feature">Istanza dedicata (white-label)</li>
+      </ul>
+      <a href="mailto:gianmarco.milocco@squpgelato.it" class="plan-btn">Contattaci →</a>
+    </div>
+    <div class="plan">
+      <div class="plan-name">Custom</div>
+      <div class="plan-price">Su misura</div>
+      <div class="plan-sub">Per grandi organizzazioni</div>
+      <ul class="plan-features">
+        <li class="plan-feature">Multi-utente</li>
+        <li class="plan-feature">Integrazione CRM</li>
+        <li class="plan-feature">Branding personalizzato</li>
+        <li class="plan-feature">Onboarding dedicato</li>
+        <li class="plan-feature">SLA garantito</li>
+      </ul>
+      <a href="mailto:gianmarco.milocco@squpgelato.it" class="plan-btn">Parliamo →</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA finale -->
+<div style="max-width:1080px;margin:0 auto;padding:0 5%">
+  <div class="demo-cta">
+    <h2>Prova adesso — è gratis</h2>
+    <p>2 kit completi senza registrazione. Se funziona, contattaci per la versione enterprise con generazioni illimitate e istanza dedicata.</p>
+    <a href="https://sdr-agent-e9qt.onrender.com" target="_blank" class="btn-primary">🚀 Apri l'agent →</a>
+  </div>
+</div>
+
+<footer>
+  © 2025 AI SDR Agent — Powered by Anthropic Claude · Tutti i diritti riservati ·
+  <a href="mailto:gianmarco.milocco@squpgelato.it" style="color:#9aa0b4">Contatto</a>
+</footer>
+
+</body>
+</html>
