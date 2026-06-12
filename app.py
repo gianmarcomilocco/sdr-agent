@@ -25,7 +25,7 @@ db.purge_old_demo_visits(30)
 DEMO_MODE      = os.getenv("DEMO_MODE", "false").lower() == "true"
 DEMO_MAX_USES  = int(os.getenv("DEMO_MAX_USES", "2"))
 CONTACT_NAME   = os.getenv("CONTACT_NAME", "Gianmarco")
-CONTACT_EMAIL  = os.getenv("CONTACT_EMAIL", "gianmarco.milocco@gmail.com")
+CONTACT_EMAIL  = os.getenv("CONTACT_EMAIL", "")
 CONTACT_PHONE  = os.getenv("CONTACT_PHONE", "")
 
 st.set_page_config(
@@ -357,6 +357,7 @@ def evaluate_quality(kit, tn, tc, tr, ti, tone):
         resp = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=220,
+            timeout=60.0,
             messages=[{"role": "user", "content": f"""Sei un esperto B2B. Valuta questo kit di prospecting.
 TARGET: {tn} | {tr} @ {tc} | {ti} | Tono: {tone}
 COLD EMAIL: {kit.get("cold_email","")[:500]}
@@ -382,7 +383,7 @@ def research_prospect(name, company, role):
             return None
         snippets = "\n".join(f"- {r['title']}: {r['body'][:200]}" for r in results)
         resp = client.messages.create(
-            model="claude-haiku-4-5-20251001", max_tokens=350,
+            model="claude-haiku-4-5-20251001", max_tokens=350, timeout=60.0,
             messages=[{"role": "user", "content": f"""Analizza queste notizie su {company} e identifica i trigger commerciali utili per un SDR che vuole contattare {name} ({role}).
 Rispondi SOLO con JSON valido:
 {{"triggers":[{{"tipo":"funding|assunzioni|espansione|prodotto|notizia","testo":"descrizione breve max 12 parole","urgenza":1}}],"sintesi":"una frase di contesto utile per personalizzare"}}
@@ -401,7 +402,7 @@ Notizie:
 def generate_subjects(cold_email, tn, tc, tr, ti, lang):
     try:
         resp = client.messages.create(
-            model="claude-haiku-4-5-20251001", max_tokens=500,
+            model="claude-haiku-4-5-20251001", max_tokens=500, timeout=60.0,
             messages=[{"role": "user", "content": f"""Sei un esperto di email marketing B2B. Basandoti su questa cold email per {tr} @ {tc} ({ti}), genera 5 oggetti alternativi in {lang} con angoli diversi.
 EMAIL: {cold_email[:600]}
 
@@ -773,6 +774,8 @@ if nav == "🎯 Generatore":
         persona = st.selectbox("Persona buyer", list(PERSONA_NOTES.keys()),
                                help="Adatta il tono e il contenuto al ruolo del destinatario")
         ab_mode = st.checkbox("Genera varianti A/B email", help="Due versioni della cold email con hook diversi")
+        intel_mode = st.checkbox("Attiva Trigger Intelligence (DuckDuckGo)",
+                                  help="Cerca notizie pubbliche sull'azienda prospect per personalizzare il kit. Richiede connessione internet e può rallentare la generazione.")
 
         genera = st.button("🚀 Genera Kit Prospecting", type="primary", use_container_width=True)
 
@@ -810,14 +813,15 @@ if nav == "🎯 Generatore":
                 else:
                     t0 = time.time()
                     with st.spinner("Analizzando il prospect e generando il kit..."):
-                        # Trigger Intelligence — sempre attiva
-                        triggers_data = research_prospect(tn, tc, tr)
-                        if triggers_data and triggers_data.get("sintesi"):
-                            ctx = (ctx + "\n\nIntelligence:\n" + triggers_data["sintesi"]).strip()
+                        triggers_data = None
+                        if intel_mode:
+                            triggers_data = research_prospect(tn, tc, tr)
+                            if triggers_data and triggers_data.get("sintesi"):
+                                ctx = (ctx + "\n\nIntelligence:\n" + triggers_data["sintesi"]).strip()
 
                         prompt = build_prompt(sn, sc, sp, sv, tn, tc, tr, ti, ctx, tone, lang, ab_mode, persona)
                         resp = client.messages.create(
-                            model="claude-sonnet-4-6", max_tokens=3200,
+                            model="claude-sonnet-4-6", max_tokens=3200, timeout=120.0,
                             messages=[{"role": "user", "content": prompt}]
                         )
                         testo = resp.content[0].text
@@ -1025,7 +1029,7 @@ elif nav == "📦 Bulk CSV":
                         progress.progress((i+1)/len(reader), text=f"Generando kit {i+1}/{len(reader)}: {tn} @ {tc}")
                         prompt = build_prompt(sn, sc, sp, sv, tn, tc, tr, ti, ctx, b_tone, b_lang)
                         resp = client.messages.create(
-                            model="claude-sonnet-4-6", max_tokens=2800,
+                            model="claude-sonnet-4-6", max_tokens=2800, timeout=120.0,
                             messages=[{"role": "user", "content": prompt}]
                         )
                         sezioni = [s.strip() for s in resp.content[0].text.split("===SEP===")]

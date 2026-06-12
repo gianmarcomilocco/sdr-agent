@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 
 APOLLO_KEY = os.getenv("APOLLO_API_KEY", "")
@@ -41,7 +42,13 @@ def search_people(titles=None, keywords=None, person_locations=None, org_locatio
     if emp_ranges:       payload["organization_num_employees_ranges"] = emp_ranges
     if seniorities:      payload["person_seniorities"]                = seniorities
 
-    r = requests.post(f"{BASE}/mixed_people/api_search",
-                      headers=headers, json=payload, timeout=20)
+    for attempt in range(3):
+        r = requests.post(f"{BASE}/mixed_people/api_search",
+                          headers=headers, json=payload, timeout=20)
+        if r.status_code < 500:
+            r.raise_for_status()
+            return r.json()
+        if attempt < 2:
+            time.sleep(2 ** attempt)
     r.raise_for_status()
     return r.json()
