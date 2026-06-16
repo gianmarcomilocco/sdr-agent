@@ -281,7 +281,11 @@ with st.sidebar:
             f"<p style='font-size:.75rem;color:rgba(255,255,255,.35);margin:4px 0 0'>{remaining}/{DEMO_MAX_USES} generazioni rimanenti</p>",
             unsafe_allow_html=True
         )
-        nav = "🎯 Generatore"
+        st.divider()
+        demo_pages = ["🎯 Generatore"]
+        if apollo.configured():
+            demo_pages.append("🔍 Trova Prospect")
+        nav = st.radio("Navigazione", demo_pages, key="nav_page", label_visibility="collapsed")
     else:
         st.markdown(f"<p style='font-size:.8rem;color:rgba(255,255,255,.45);margin:0'>Connesso come</p><p style='font-size:.92rem;font-weight:600;margin:2px 0 0'>{user_display}</p>", unsafe_allow_html=True)
         st.divider()
