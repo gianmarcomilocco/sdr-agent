@@ -701,7 +701,7 @@ if nav == "🎯 Generatore":
     st.markdown("""
 <div class="sdr-header">
   <h1 class="sdr-title">🎯 AI SDR Agent <span class="badge-ent">Enterprise</span></h1>
-  <p class="sdr-sub">Kit di prospecting B2B personalizzato — 6 asset pronti in 20 secondi</p>
+  <p class="sdr-sub">Kit di prospecting B2B personalizzato — 6 asset pronti in pochi secondi</p>
   <div class="hdr-metrics">
     <div class="hdr-m"><span class="v">6</span><span class="l">Asset per prospect</span></div>
     <div class="hdr-m"><span class="v">~45s</span><span class="l">Generazione</span></div>
