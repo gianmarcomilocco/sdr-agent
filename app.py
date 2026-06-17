@@ -223,38 +223,10 @@ if DEMO_MODE:
         st.session_state.demo_ip   = _visitor_ip
         st.session_state.demo_uses = db.get_demo_uses(_visitor_ip)
 else:
-    _admin_hash = os.getenv("ADMIN_PASSWORD_HASH", "")
     _admin_user = os.getenv("ADMIN_USERNAME", "admin")
-    _cookie_key = os.getenv("AUTH_COOKIE_KEY", "")
-    if _admin_hash and _cookie_key:
-        cfg = {
-            "credentials": {
-                "usernames": {
-                    _admin_user: {
-                        "email": f"{_admin_user}@sdragent.io",
-                        "name": _admin_user.title(),
-                        "password": _admin_hash,
-                    }
-                }
-            },
-            "cookie": {"name": "sdr_agent_auth", "key": _cookie_key, "expiry_days": 7},
-        }
-    else:
-        cfg_path = Path(__file__).parent / "auth_config.yaml"
-        with open(cfg_path) as f:
-            cfg = yaml.load(f, Loader=SafeLoader)
+    _admin_hash = os.getenv("ADMIN_PASSWORD_HASH", "").strip()
 
-    authenticator = stauth.Authenticate(
-        cfg["credentials"], cfg["cookie"]["name"],
-        cfg["cookie"]["key"], cfg["cookie"]["expiry_days"]
-    )
-    authenticator.login()
-
-    status = st.session_state.get("authentication_status")
-    if status is False:
-        st.error("Username o password non corretti.")
-        st.stop()
-    if status is None:
+    if not st.session_state.get("authenticated"):
         st.markdown("""
         <div style="max-width:400px;margin:4rem auto;text-align:center">
           <p style="font-size:2rem;margin-bottom:.5rem">🎯</p>
@@ -262,6 +234,24 @@ else:
           <p style="color:#64748b;font-size:.88rem">Accedi con le credenziali fornite</p>
         </div>
         """, unsafe_allow_html=True)
+        with st.form("login_form"):
+            _usr = st.text_input("Username")
+            _pwd = st.text_input("Password", type="password")
+            _submit = st.form_submit_button("Accedi", type="primary")
+        if _submit:
+            import bcrypt as _bcrypt
+            try:
+                _ok = (_usr == _admin_user and bool(_admin_hash) and
+                       _bcrypt.checkpw(_pwd.encode(), _admin_hash.encode()))
+            except Exception:
+                _ok = False
+            if _ok:
+                st.session_state["authenticated"] = True
+                st.session_state["username"] = _usr
+                st.session_state["name"] = _usr.title()
+                st.rerun()
+            else:
+                st.error("Username o password non corretti.")
         st.stop()
 
     username     = st.session_state.get("username", "")
@@ -293,7 +283,9 @@ with st.sidebar:
                        ["🎯 Generatore", "🔍 Trova Prospect", "📦 Bulk CSV", "📚 Archivio", "👤 Profili"],
                        key="nav_page", label_visibility="collapsed")
         st.divider()
-        authenticator.logout(location="sidebar")
+        if st.button("Logout", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
     st.markdown("<p style='font-size:.68rem;color:rgba(255,255,255,.2);margin-top:2rem'>AI SDR Agent · Enterprise</p>", unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════
