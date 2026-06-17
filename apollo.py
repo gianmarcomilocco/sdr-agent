@@ -21,16 +21,17 @@ SENIORITY_MAP = {
     "Senior IC":         ["senior"],
 }
 
-def configured():
-    return bool(APOLLO_KEY)
+def configured(api_key=None):
+    return bool(api_key or APOLLO_KEY)
 
 def search_people(titles=None, keywords=None, person_locations=None, org_locations=None,
-                  emp_ranges=None, seniorities=None, page=1, per_page=25):
-    if not APOLLO_KEY:
+                  emp_ranges=None, seniorities=None, page=1, per_page=25, api_key=None):
+    key = api_key or APOLLO_KEY
+    if not key:
         raise ValueError("APOLLO_API_KEY non configurata")
 
     headers = {
-        "x-api-key": APOLLO_KEY,
+        "x-api-key": key,
         "Content-Type": "application/json",
         "Cache-Control": "no-cache",
     }

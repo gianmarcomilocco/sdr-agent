@@ -145,3 +145,27 @@ def delete_kit(kid, username):
 def purge_old_kits(days=365):
     with conn() as c:
         c.execute("DELETE FROM kits WHERE datetime(generated_at) < datetime('now', ?)", (f"-{int(days)} days",))
+
+# ── Settings (key-value per username) ────────────────────
+
+def _ensure_settings():
+    with conn() as c:
+        c.execute("""CREATE TABLE IF NOT EXISTS settings (
+            username TEXT NOT NULL,
+            key      TEXT NOT NULL,
+            value    TEXT NOT NULL DEFAULT '',
+            PRIMARY KEY (username, key)
+        )""")
+
+def get_setting(username, key, default=""):
+    _ensure_settings()
+    with conn() as c:
+        r = c.execute("SELECT value FROM settings WHERE username=? AND key=?", (username, key)).fetchone()
+        return r["value"] if r else default
+
+def set_setting(username, key, value):
+    _ensure_settings()
+    with conn() as c:
+        c.execute("""INSERT INTO settings (username, key, value) VALUES (?,?,?)
+            ON CONFLICT(username, key) DO UPDATE SET value=excluded.value""",
+            (username, key, value))

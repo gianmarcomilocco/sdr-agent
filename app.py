@@ -1,6 +1,5 @@
 import streamlit as st
 import anthropic
-import yaml
 import json
 import csv
 import io
@@ -11,8 +10,6 @@ import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from yaml.loader import SafeLoader
-import streamlit_authenticator as stauth
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 import db
@@ -280,7 +277,7 @@ with st.sidebar:
         st.markdown(f"<p style='font-size:.8rem;color:rgba(255,255,255,.45);margin:0'>Connesso come</p><p style='font-size:.92rem;font-weight:600;margin:2px 0 0'>{user_display}</p>", unsafe_allow_html=True)
         st.divider()
         nav = st.radio("Navigazione",
-                       ["🎯 Generatore", "🔍 Trova Prospect", "📦 Bulk CSV", "📚 Archivio", "👤 Profili"],
+                       ["🎯 Generatore", "🔍 Trova Prospect", "📦 Bulk CSV", "📚 Archivio", "👤 Profili", "⚙️ Impostazioni"],
                        key="nav_page", label_visibility="collapsed")
         st.divider()
         if st.button("Logout", use_container_width=True):
@@ -880,9 +877,15 @@ if nav == "🎯 Generatore":
 elif nav == "🔍 Trova Prospect":
     st.markdown('<p class="page-title">🔍 Trova Prospect — Apollo Intelligence</p>', unsafe_allow_html=True)
 
-    if not apollo.configured():
-        st.warning("Chiave Apollo non configurata. Aggiungi **APOLLO_API_KEY** nel file `.env` o nelle variabili d'ambiente Render.")
-        st.code("APOLLO_API_KEY=la-tua-master-api-key", language="bash")
+    _user_apollo_key = db.get_setting(username, "apollo_api_key") if not DEMO_MODE else ""
+    _effective_apollo_key = _user_apollo_key or None
+
+    if not apollo.configured(_effective_apollo_key):
+        st.warning("Chiave Apollo non configurata.")
+        if not DEMO_MODE:
+            st.info("Vai su **⚙️ Impostazioni** e inserisci la tua Apollo API Key per attivare la ricerca prospect.")
+        else:
+            st.code("APOLLO_API_KEY=la-tua-api-key", language="bash")
     else:
         col_form, col_res = st.columns([2, 5], gap="large")
 
@@ -919,6 +922,7 @@ elif nav == "🔍 Trova Prospect":
                             emp_ranges=emp_flat or None,
                             seniorities=sen_flat or None,
                             per_page=ap_per_page,
+                            api_key=_effective_apollo_key,
                         )
                         st.session_state.apollo_results = data.get("people", [])
                         st.session_state.apollo_total   = data.get("total_entries", 0)
@@ -1159,3 +1163,50 @@ elif nav == "👤 Profili":
                         db.delete_profile(p["id"])
                         st.rerun()
                 st.divider()
+
+# ════════════════════════════════════════════════════════
+# PAGE — IMPOSTAZIONI
+# ════════════════════════════════════════════════════════
+elif nav == "⚙️ Impostazioni":
+    st.markdown('<p class="page-title">Impostazioni</p>', unsafe_allow_html=True)
+
+    st.markdown("""<div style="background:#fff;border:1.5px solid #e4eaf2;border-radius:12px;padding:1.4rem 1.6rem;margin-bottom:1.2rem">
+<p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8896aa;margin:0 0 1rem">Apollo API Key</p>""",
+        unsafe_allow_html=True)
+
+    current_key = db.get_setting(username, "apollo_api_key")
+    masked = ("•" * 20 + current_key[-6:]) if len(current_key) > 6 else ("Nessuna chiave salvata")
+
+    st.caption(f"Chiave attuale: `{masked}`")
+
+    with st.form("apollo_key_form"):
+        new_key = st.text_input("Inserisci la tua Apollo API Key",
+                                placeholder="api_key_...",
+                                type="password",
+                                help="Trovi la chiave su apollo.io → Settings → Integrations → Apollo API")
+        col1, col2 = st.columns(2)
+        with col1:
+            save = st.form_submit_button("💾 Salva chiave", type="primary", use_container_width=True)
+        with col2:
+            clear = st.form_submit_button("🗑️ Rimuovi chiave", use_container_width=True)
+
+    if save:
+        if new_key.strip():
+            db.set_setting(username, "apollo_api_key", new_key.strip())
+            st.success("Chiave Apollo salvata. Vai su Trova Prospect per cercare contatti.")
+            st.rerun()
+        else:
+            st.error("Inserisci una chiave valida.")
+    if clear:
+        db.set_setting(username, "apollo_api_key", "")
+        st.success("Chiave rimossa.")
+        st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("""<div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:1rem 1.2rem">
+<p style="font-size:.84rem;color:#0369a1;margin:0"><strong>Come ottenere la chiave Apollo:</strong><br>
+1. Vai su <a href="https://app.apollo.io/#/settings/integrations/api" target="_blank" style="color:#0369a1">apollo.io → Settings → Integrations → Apollo API</a><br>
+2. Clicca <strong>Connect</strong> → <strong>API Keys</strong> → crea una nuova chiave<br>
+3. Incollala qui sopra e salva</p>
+</div>""", unsafe_allow_html=True)
